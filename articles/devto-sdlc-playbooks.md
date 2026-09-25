@@ -13,6 +13,8 @@ In my experience the usual failure isn't a bug. It's a feature nobody specified,
 
 I built [**sdlc-playbooks**](https://github.com/srnux/sdlc-playbooks) to catch those failures mechanically. It's a file-based delivery procedure (design system → requirements → prototype → human approval → product) that runs in Claude Code and in Codex from one source. This post covers how it works and why it's shaped the way it is.
 
+**The repo defines playbooks instead of specialised agents.** Each playbook describes a phase: what it needs, which checks must pass, what work happens, and what artifact it produces. The coding agent executes that procedure. Moving from requirements to implementation means changing the playbook, without needing a separate "product owner" or "engineer" agent definition.
+
 One idea runs through the whole thing:
 
 > **A rule written only as prose for a model to honour will eventually be skipped.**
@@ -63,9 +65,9 @@ With the default file tracker, the workflow state lives in the repo. **If you de
 
 ---
 
-## Why there are no "roles"
+## Why playbooks instead of agents
 
-Most agent setups I've seen start with personas: *"You are a senior reviewer."* This repo organises work by phase and artifact. Each playbook names its inputs, gate, outputs, and done-condition. For example:
+Most agent setups I've seen start with personas: *"You are a senior reviewer."* That describes an identity, but leaves the working procedure to be specified elsewhere. Here, the playbook is the unit of organisation. It names the inputs, gate, outputs, and done-condition for a phase. For example:
 
 ```markdown
 ## Contract
@@ -80,7 +82,11 @@ Most agent setups I've seen start with personas: *"You are a senior reviewer."* 
 | **Never**      | copy the prototype into the product; build against the live prototype |
 ```
 
-Each playbook also routes neighbouring decisions: new tokens go to `lock-design-system`, changed scope goes to `capture-requirements`, and finished work goes to `review-change`. Earlier role files mostly duplicated these instructions. Keeping two copies of a rule means you have one rule and one future contradiction.
+Each playbook also routes neighbouring decisions: new tokens go to `lock-design-system`, changed scope goes to `capture-requirements`, and finished work goes to `review-change`.
+
+The earlier version had separate agent definitions. Most of their instructions already existed in the matching playbooks; the remaining ownership rules belonged at phase boundaries. Removing those files left one place to maintain each procedure. Keeping two copies of a rule means you have one rule and one future contradiction.
+
+Handoffs happen through saved artifacts. Requirements supply acceptance criteria to prototyping; an approved snapshot supplies the baseline for planning and implementation; the plan and resulting code supply the inputs to review. The next phase can run in a fresh session because its inputs are in the repo. It doesn't need the previous agent's persona or conversation history to reconstruct what was agreed.
 
 ---
 
