@@ -1,7 +1,7 @@
 ---
 title: "Stop Asking Your Coding Agent to Behave: Gates, Not Prompts"
 published: false
-description: "A file-based delivery procedure for Claude Code and Codex where every rule that matters is a script that exits 2, not a paragraph a model is asked to honour."
+description: "A file-based delivery procedure for Claude Code and Codex that turns workflow preconditions into executable checks, with explicit limits."
 tags: ai, productivity, architecture, webdev
 cover_image:
 canonical_url:
@@ -17,7 +17,7 @@ One idea runs through the whole thing:
 
 > **A rule written only as prose for a model to honour will eventually be skipped.**
 
-So every rule that can be checked is a script that exits non-zero.
+So I move checkable preconditions into scripts that exit non-zero. The scripts catch missing artifacts and inconsistent state; people still decide whether the requirements and the result are right.
 
 ---
 
@@ -33,7 +33,7 @@ So every rule that can be checked is a script that exits non-zero.
           └──────────────┬─────────────────┘
                          ▼
                  2 build-prototype
-            self-contained React page
+             single-file React page
             every screen, every state
                          │
                          ▼
@@ -55,19 +55,17 @@ There are seven phases, each with one playbook and one gate. Everything the flow
 | `design-system/tokens.css`, `components.md` | phase 0, then locked |
 | `work/items/REQ-###.md` | phase 1 |
 | `prototype/<slug>.html` | phase 2 |
-| `prototype/.approved/<slug>-v<N>.html` | phase 3, **immutable** |
+| `prototype/.approved/<slug>-v<N>.html` | phase 3, versioned baseline |
 | `work/items/ST-###.md` | phase 3, one story per screen |
 | `work/plans/ST-###.md` | phase 4 |
 
-Nothing lives in a database or in model memory, and no state is hidden. **If you delete every playbook, a human can still finish the work from the artifacts.** That's the intended direction of dependency.
+With the default file tracker, the workflow state lives in the repo. **If you delete every playbook, a human can still finish the work from the artifacts.** That's the intended direction of dependency.
 
 ---
 
 ## Why there are no "roles"
 
-Most agent setups I've seen start with personas: *"You are a senior reviewer."* *"You are the product owner."* This repo has none, and the project's `CLAUDE.md` says adding one would be a regression.
-
-A role definition describes an identity and hopes the right behaviour follows. A playbook describes a procedure: named inputs, a precondition that fails closed, a fixed sequence, and a done-condition. Each playbook starts with a contract:
+Most agent setups I've seen start with personas: *"You are a senior reviewer."* This repo organises work by phase and artifact. Each playbook names its inputs, gate, outputs, and done-condition. For example:
 
 ```markdown
 ## Contract
@@ -82,20 +80,7 @@ A role definition describes an identity and hopes the right behaviour follows. A
 | **Never**      | copy the prototype into the product; build against the live prototype |
 ```
 
-…and ends with a section that says which phase owns each neighbouring decision:
-
-```markdown
-## Not this playbook
-
-- **Deciding whether it's done** → `review-change`. Self-approval removes the
-  only independent check in the flow.
-- **Absorbing a prototype change** → back to `capture-requirements` as new scope.
-- **Adding a token or component** → `lock-design-system`.
-```
-
-Those two blocks cover everything a role file used to carry, including who owns what. The repo was ported from an earlier version that did have five agent files. When I audited them, nearly every line was already in a matching skill. The only content that existed nowhere else was five sentences of ownership routing, and those were really statements about phases, not people. Keeping two copies of a rule means you have one rule and one future contradiction.
-
-A side effect: playbooks are named after what they produce (`freeze-approval`), not who would do the work ("product owner"). You can read the directory listing and know what the flow does.
+Each playbook also routes neighbouring decisions: new tokens go to `lock-design-system`, changed scope goes to `capture-requirements`, and finished work goes to `review-change`. Earlier role files mostly duplicated these instructions. Keeping two copies of a rule means you have one rule and one future contradiction.
 
 ---
 
@@ -107,7 +92,7 @@ Every phase begins with:
 node .claude/tools/gate.mjs <phase> [id] [flags]
 ```
 
-The gate checks the phase's preconditions against the repo. If one fails, it **exits 2 with a named reason and a fix**. In Claude Code, each slash command expands the gate inline with the `` !`…` `` syntax, so the gate runs *when the command expands, before the model reads the rest of the prompt*:
+The gate checks the phase's preconditions against the repo. If one fails, it **exits 2 with a named reason and a fix**. The Claude Code command files invoke it through inline shell expansion:
 
 ```markdown
 ---
@@ -119,7 +104,7 @@ Gate — this runs before you read any further; a non-zero exit aborts the comma
 !`node .claude/tools/gate.mjs approve $0 $1 2>&1`
 ```
 
-A blocked gate aborts the command outright. The model doesn't get to write a paragraph about why it probably shouldn't continue and then carry on anyway.
+That puts a concrete check at the command entry point. The playbook instructs the agent to stop on failure. Direct script calls and other editing paths still need their own controls.
 
 | Phase | Refuses when |
 |---|---|
@@ -131,15 +116,13 @@ A blocked gate aborts the command outright. The model doesn't get to write a par
 | `implement` | **no plan** · story not `in-progress` · snapshot missing |
 | `review` | story not `in-review` · **already at `loops.reviewRounds`** |
 
-### The gate that is a person
+### Making the approval assertion explicit
 
 The old version of `/approve` said: *"This command represents a human decision. Do not run it on your own judgment."*
 
-That's exactly the kind of rule that gets skipped on the twentieth run at 6pm. Now it looks like this:
+The gate now requires an explicit flag:
 
 ```js
-// The one gate that is a person. Prose asking a model not to approve on its own
-// judgment is exactly the rule that gets skipped; this one cannot be.
 if (!args['human-approved']) {
   throw new Blocked(
     `approval is a human decision and has not been recorded for ${id}`,
@@ -148,7 +131,7 @@ if (!args['human-approved']) {
 }
 ```
 
-Running it against the example requirement in the repo:
+The bundled seaside example illustrates the check: even with a prototype ready to inspect, an approval gate call without the flag is refused:
 
 ```text
 $ node .claude/tools/gate.mjs approve REQ-003
@@ -162,50 +145,21 @@ $ echo $?
 2
 ```
 
-Could a model just pass the flag? Technically, yes. But the flag is now a deliberate, visible act in the transcript, with a stated meaning ("a person said yes in this conversation"), and the command text tells the model not to re-run with the flag just to get past a refusal. There's no longer a path from "the prototype looks finished" to "stories are cut" that goes around a human without anyone noticing.
+The flag means "a person said yes in this conversation." It makes that assertion explicit and reviewable, but does not verify it independently: the agent can supply the flag, and the snapshot utility can be called directly. Respecting human approval still depends on following the procedure.
 
 ### The review loop is bounded
 
-Review can approve a story or send it back. Without a limit, an agent and its reviewer can go back and forth forever. The gate counts `round N:` entries in the story's notes and refuses the round past the cap:
+Review can approve a story or send it back. The gate reads the highest `round N:` recorded in the story's notes and refuses a round beyond `loops.reviewRounds` (two by default). That bound depends on the reviewer recording each round. When the cap is reached, the procedure calls for handing the disagreement to a person.
 
-```js
-const cap = cfg.loops?.reviewRounds ?? 2;
-const round = reviewRound(story.body) + 1;
-if (round > cap) {
-  throw new Blocked(
-    `${id} has already been bounced ${cap} times (loops.reviewRounds)`,
-    `set ${id} --status blocked — then hand the human the actual disagreement. ` +
-    `The third round is almost never the one that resolves it.`
-  );
-}
-```
-
-### Gates also hand over the facts
-
-On success the gate prints the resolved context as JSON: paths, the pinned prototype version, the acceptance-criterion ids, the review round. Facts fixed at gate time are facts the model doesn't have to rediscover by guessing halfway through.
-
-```json
-{
-  "ok": true,
-  "gate": "prototype",
-  "context": {
-    "id": "REQ-003",
-    "status": "prototyped",
-    "acs": ["AC-1", "AC-2", "…", "AC-17"],
-    "mode": "refine",
-    "prototype": "prototype/seaside-zadar-landing.html",
-    "tokens": "design-system/tokens.css"
-  }
-}
-```
+On success, gates print resolved context as JSON: paths, the pinned prototype version, acceptance-criterion ids, and the review round where relevant. The agent gets concrete inputs for its next step.
 
 ---
 
 ## Layer 2: hooks decide whether an edit may land
 
-Gates only run when you go through a command. Hooks catch everything else. Two shell scripts are wired as `PreToolUse` hooks on `Edit|Write`:
+Hooks add checks at supported edit entry points. In Claude Code, two shell scripts are wired as `PreToolUse` hooks on `Edit|Write`:
 
-**`require-plan.sh` blocks.** No product-code edit lands without `work/plans/<STORY-ID>.md`. It works out the story from the branch name (`story/ST-007-…`). If the branch name doesn't identify a story, it asks the tracker which story is `in-progress`, because working on `main` is exactly the case the gate exists for.
+**`require-plan.sh` blocks a guarded edit when it identifies a story with no plan.** It finds the story from the branch name (`story/ST-007-…`) or, failing that, from exactly one `in-progress` story in the tracker. For example:
 
 ```text
 BLOCKED — no plan for ST-007.
@@ -220,48 +174,48 @@ The reasoning: a plan written after the code is just a summary, and a summary ne
 
 **`check-hardcoded-colors.sh` warns.** It flags a raw `#hex`, `rgb()` or `hsl()` at the moment it's written, while fixing it is still a one-line change. The blocking version of this rule runs at review time.
 
-Both scripts read the edited path from either `file_path` (Claude Code) or `path` (Codex), so one copy serves both tools.
+The hooks have limits: shell writes fall outside Claude's `Edit|Write` matcher, some file types are excluded, and the plan hook allows an edit when no story can be identified. Both scripts accept `file_path` or `path`; actual coverage also depends on the harness invoking them with a supported payload.
 
 ---
 
-## Layer 3: checks decide whether something is finished
+## Layer 3: checks expose gaps before handover
 
-**`check-tokens.mjs`** fails on any raw design value outside `tokens.css`. It's scoped to properties that carry a design decision (`font-size`, `border-radius`, `box-shadow`, padding, margin, gap), plus any raw colour anywhere. `width: 100%` and `z-index` are layout, and layout is yours to write.
+**`check-tokens.mjs`** scans prototypes and configured product directories for raw hex/RGB/HSL colours and literal values in selected properties: font size, radius, shadow, padding, margin, and gap. It also checks for undefined token references. `width: 100%` and `z-index` are outside those design-property checks.
 
 ```text
 $ node .claude/tools/check-tokens.mjs
 ok — 139 tokens defined, 134 used, no raw design values in 1 files
 ```
 
-The rule behind it: **a design value can only be created in phase 0.** If a screen needs a colour the tokens don't have, that's a design-system change, not a literal typed into a component.
+The procedure's rule is that **a design value can only be created in phase 0**. The scanner catches common violations; it is not a complete CSS validator. It permits token-definition blocks for inlined prototypes without verifying that their values match the locked file.
 
-**`check-coverage.mjs`** walks the traceability chain:
+**`check-coverage.mjs`** checks structural links:
 
 ```
-requirement → AC → screen (in the approved snapshot) → story → plan → code → done
+requirement → approved snapshot → screen → story → plan file
 ```
 
-It names every break: `screen-without-story`, `story-without-plan`, `stale-pin`, `done-story-screen-vanished`, and about a dozen more. Exit 2 on any gap.
+It reports gaps such as `screen-without-story`, `story-without-plan`, `stale-pin`, and `done-story-screen-vanished`, exiting 2 when it finds one. It checks that acceptance criteria exist, but does not map each AC to a screen or inspect implementation and test coverage.
 
-What makes this possible is two attributes on every screen root in the prototype:
+The prototype convention puts two attributes on every screen root:
 
 ```html
 <section data-screen="SCR-booking-enquiry" data-req="REQ-003">
 ```
 
-This markup matters. Without it, a screen doesn't exist as far as the flow is concerned, and the approve gate refuses a prototype that has none.
+The checker discovers screens through `data-screen`; the approve gate refuses a prototype with no screen markers. `data-req` records the intended requirement association.
 
-**Completeness is a query, not a judgment call.** That's the whole reason for the ids.
+**Structural gaps become queryable.** Whether the product satisfies the requirements still needs tests and review.
 
 ---
 
 ## The prototype, and the pin
 
-Phase 2 produces one self-contained HTML file per requirement: React 18 UMD plus `@babel/standalone` from a CDN, tokens inlined, catalog components only, hash routing, realistic mock data. It needs no build step and opens with a double-click. **Every state is drawn**: empty, loading, populated, error, *and success*. "The list refreshes" doesn't count as a success state, and a prototype that only shows the happy populated path is how silent failures ship.
+Phase 2 calls for one HTML file per requirement: React 18 UMD plus `@babel/standalone` from a CDN, tokens inlined, catalog components, hash routing, and realistic mock data. It needs no build step and opens with a double-click, but loading its CDN dependencies requires network access. The playbook requires **every state to be drawn**: empty, loading, populated, error, *and success*. "The list refreshes" doesn't show a person what success looks like.
 
-When a person approves it, `approve.mjs` copies it to `prototype/.approved/<slug>-v<N>.html` and refuses to overwrite an existing snapshot. A baseline that can change isn't a baseline. One story is cut per screen, and each one records `prototypeVersion: v<N>`.
+After human approval, the procedure uses `approve.mjs` to create `prototype/.approved/<slug>-v<N>.html`, then cuts one story per screen with a `prototypeVersion: v<N>` pin. These are versioned snapshots treated as immutable by the procedure. The utility checks for an existing destination before copying; the resulting files remain editable on disk.
 
-**Stories are built against the pinned snapshot, never against the live prototype.** Prototypes keep changing after approval, because someone always has "one more tweak". If the live file has moved on, `gate.mjs implement` says so:
+**The implementation playbook directs the agent to build against the pinned snapshot.** If someone makes "one more tweak" to the live file, `gate.mjs implement` reports the difference:
 
 ```json
 {
@@ -285,9 +239,9 @@ node .claude/tools/sync.mjs --check  # exit 2 if one is stale (for CI)
 
 Each generated directory has a `.generated` marker holding the source hash, so a hand-edit to a projection is detected, not silently kept.
 
-They're copies rather than symlinks on purpose: symlinks need developer mode or an elevated shell on Windows, and an install step that fails for half the team isn't an install step.
+Copies avoid the extra permissions or developer-mode setup that symlinks can require on Windows.
 
-In Claude Code you drive the flow with slash commands (`/requirements`, `/prototype`, `/approve`, `/build`, `/status`). In Codex you call playbooks by name (`$build-prototype`). Each playbook runs its own gate as step 0, so the procedure is identical even without the command layer.
+Claude Code has slash commands such as `/requirements`, `/prototype`, and `/build`. The projected skills expose the same playbooks, including `build-prototype`, with a gate invocation as step 0. The shared procedure does not make the harnesses' enforcement identical.
 
 ---
 
@@ -301,11 +255,11 @@ node .claude/tools/tracker.mjs set ST-007 --status in-review
 node .claude/tools/tracker.mjs next --type story
 ```
 
-Today the provider is `files`, with markdown and YAML front matter in `work/items/`. A Jira provider ships as a skeleton with the field and status mapping already written and only the transport stubbed. Switching is a one-line config change, and nothing above the adapter changes.
+The default provider is `files`, storing Markdown with YAML front matter in `work/items/`. Jira support is unfinished: mapping and REST code exist, but the gate's asynchronous provider handling and the coverage checker's direct file reads still need integration work.
 
-Two small rules prevent a surprising number of problems: **never hand-edit a work item, and never pick an id yourself.** `create` allocates the next free id, so two sessions can't both claim `REQ-004`.
+Two procedural rules keep updates consistent: **never hand-edit a work item, and never pick an id yourself.** `create` allocates IDs centrally so agents don't choose them manually. Allocation is not protected against concurrent writers.
 
-Even with Jira as the tracker, the artifacts stay in the repo. The tracker holds status and conversation; the repo holds the work.
+The adapter is intended to let status and conversation move to another tracker while design, prototype, and plan artifacts stay in the repo.
 
 ---
 
@@ -320,17 +274,7 @@ node .claude/tools/check-tokens.mjs
 node .claude/tools/gate.mjs plan ST-001
 ```
 
-```text
-$ node .claude/tools/status.mjs
-
-NEEDS A HUMAN
-  REQ-003   prototype waiting for approval  →  open it, then /approve REQ-003
-
-NEXT
-  /prototype REQ-001   Web application scaffold: pnpm monorepo, Next.js web, NestJS API
-```
-
-Node 18+, zero dependencies, plain ESM. Bash for the two hooks (Git Bash works fine on Windows).
+The local tools use Node 18+ and plain ESM, with no npm dependencies. The hooks require Bash; on Windows, that means a Bash installation such as Git Bash.
 
 ---
 
@@ -346,23 +290,26 @@ The rule for adding one: do it when a specific failure demands it, and write dow
 
 ## Try it
 
+Clone the repo and generate the skill projections in your terminal:
+
 ```bash
 git clone https://github.com/srnux/sdlc-playbooks
 cd sdlc-playbooks
-$EDITOR .claude/sdlc.config.json            # product name, verify commands
-$EDITOR .claude/rules/coding-standards.md   # rewrite the stack-specific half
 node .claude/tools/sync.mjs
-
-/design-system
-/requirements 'PO text here…'
-/prototype REQ-001
-#   … a human opens it and says yes …
-/approve REQ-001 --human-approved
-/build
 ```
 
-The repo ships with a worked example: a locked design system for a seaside holiday-rental landing page, a real prototype with nine marked screens, and three requirements.
+Edit `.claude/sdlc.config.json` for your product and verification commands, and rewrite the stack-specific half of `.claude/rules/coding-standards.md`.
 
-My one piece of advice: **run one real requirement end to end before you load up the backlog.** If the procedure survives one slice, it will scale. If it doesn't, you'd rather find out on one.
+The repo includes a locked seaside-rental design system, a prototype with nine marked screens, and three requirements. You can inspect that example first. For your own design, update the configured design source and run `/design-system --refresh` in Claude Code. A bare `/design-system` refuses because the bundled system is already locked.
+
+Then, in Claude Code:
+
+```text
+/requirements 'PO text here…'
+```
+
+Use the requirement ID returned by that command in `/prototype <returned-id>`. Open the result and review its screens and states. Only after you approve it, run `/approve <returned-id> --human-approved`, then `/build`.
+
+My one piece of advice: **run one real requirement end to end before you load up the backlog.** That gives you a concrete way to find gaps in the procedure while the scope is still small.
 
 If you've built something similar, or tried to hold an agent to a process with prompts alone and watched it slip, I'd like to hear what broke first.
