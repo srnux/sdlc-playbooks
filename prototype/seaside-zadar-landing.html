@@ -1,0 +1,1977 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PROTOTYPE — REQ-003 · Public landing page for the Seaside Zadar apartment</title>
+
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+<script>
+  /* Every CDN reference here is pinned, and the JSX runtime is pinned too.
+     Unpinned, "@babel/standalone" now resolves to 8.x, whose react preset
+     defaults to the AUTOMATIC runtime: it emits `import ... from
+     "react/jsx-runtime"`, which a classic <script> cannot execute, and the
+     page renders blank with one console error. Ask for classic explicitly so
+     a future bump cannot do that again. */
+  Babel.registerPreset('react-classic', {
+    presets: [[Babel.availablePresets['react'], { runtime: 'classic' }]],
+  });
+</script>
+
+<style>
+/* ============================================================================
+   TOKENS — pasted from design-system/tokens.css.
+   Do not edit here. A value you need that isn't below is a design-owner
+   decision: go to /design-system, don't add it inline.
+
+   Two prose comment lines in the source file quote a colour literal to explain
+   a contrast ratio. They are reworded here (and only here) because the gate
+   reads every line of this file, not just its declarations. No declaration is
+   altered.
+   ========================================================================= */
+/* =============================================================================
+   Vinjerac — Seaside Zadar. LOCKED design system.
+
+   Derived strictly from  docs/seaside-zadar-v3.html
+   (the `designSystem.source.ref` in .claude/sdlc.config.json).
+
+   Every value below appears in that canvas — EXCEPT the block marked
+   "DECIDED, NOT DERIVED", which is the only part of this file that does not.
+   Nothing here was invented to round out a scale. Where the canvas has one
+   grey, this file has one grey.
+
+   Adding, changing or removing a token is a design decision that touches every
+   screen ever built from it. It happens at /design-system and nowhere else.
+
+   2026-09-13 — refresh + extension. Re-derived from the canvas: every colour
+   literal and every design-carrying value in it was already tokenised, so
+   NOTHING MOVED. Then extended, deliberately, to unblock REQ-003: the canvas is
+   a marketing page whose booking bar is static text, and REQ-003 turns it into a
+   real enquiry form. State colour, a focus ring and a disabled treatment were
+   decided with the PO and are marked as such below.
+
+   Remaining gaps — see design-system/components.md § Gaps. There is still no
+   warning colour, because nothing yet needs one. The next thing that does comes
+   back here, and does not improvise.
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   FONT LOADING — the authoritative list. Copy this, not the canvas's.
+
+   The canvas imports EIGHT faces and uses THREE: all four weights of Cormorant
+   Garamond, which no rule in it ever references, plus a Playfair italic that
+   nothing sets. Only the three below are used — 600 for every heading and the
+   brand, 700 for the hero title, 400 for the booking field value. The body
+   family is a system stack and downloads nothing.
+
+   @import is render-blocking and serialises this request behind the stylesheet.
+   It is correct here so that this file stands alone when inlined into a
+   prototype. In the product, load the same three faces from the document head
+   with a preconnect, or through the framework's font layer — REQ-003 AC-8 is
+   about exactly this.
+   ----------------------------------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap');
+
+:root {
+
+  /* ---------------------------------------------------------------------------
+     COLOUR — surfaces
+     The canvas declares --bg and --surface as the same white. The genuine
+     second surface is the tinted band behind the gallery.
+     --------------------------------------------------------------------------- */
+  --ds-color-bg:               #ffffff;
+  --ds-color-surface:          #ffffff;
+  --ds-color-surface-alt:      #f8f9fa;   /* gallery band */
+
+  /* COLOUR — text on light surfaces */
+  --ds-color-text:             #1a1a2e;   /* 17.06:1 on bg — AA */
+  --ds-color-text-muted:       #6b7280;   /* 4.83:1 on bg — AA */
+
+  /* COLOUR — lines */
+  --ds-color-border:           #e5e7eb;
+
+  /* ---------------------------------------------------------------------------
+     COLOUR — primary (the Adriatic navy)
+     This is the action colour: Book Now, Search, Inquire Now, and the inverted
+     location panel. It is the only colour that means "press this".
+     --------------------------------------------------------------------------- */
+  --ds-color-primary:          #2c3e6b;   /* white on it: 10.46:1 — AA */
+  --ds-color-primary-hover:    #3b5998;   /* white on it:  6.84:1 — AA */
+  --ds-color-primary-contrast: #ffffff;
+
+  /* ---------------------------------------------------------------------------
+     COLOUR — accent (the gold)
+     DECORATIVE ONLY. In the canvas it appears on section eyebrows, the short
+     rules under headings, and the feature icons. It is never a button and never
+     a link.
+     ACCESSIBILITY: 2.24:1 on --ds-color-bg — FAILS WCAG AA, and the canvas uses
+     it at 12px. It passes only on --ds-color-primary (4.67:1). See § Gaps.
+     --------------------------------------------------------------------------- */
+  --ds-color-accent:           #c9a96e;
+
+  /* =============================================================================
+     DECIDED, NOT DERIVED — 2026-09-13
+     Everything in this block was chosen with the PO at /design-system. None of it
+     appears in the canvas, because the canvas is a marketing page with no form,
+     no failure and no keyboard affordance. Each value carries the contrast ratio
+     it was chosen for, measured against --ds-color-bg (white).
+     ============================================================================= */
+
+  /* COLOUR — state
+     The canvas has neither a red nor a green. These are the two that were added,
+     and they are the only two: there is still no warning colour because nothing
+     yet needs one. Both ratios hold in either direction — coloured text on white,
+     and white text on a filled block of the colour. */
+  --ds-color-danger:           #b3261e;   /* 6.54:1 — invalid field, failed enquiry */
+  --ds-color-danger-contrast:  #ffffff;
+  --ds-color-success:          #2d6a4f;   /* 6.39:1 — enquiry sent */
+  --ds-color-success-contrast: #ffffff;
+
+  /* COLOUR — the second gold
+     No single gold works. --ds-color-accent passes on the navy panel
+     (4.67:1) and fails badly on white (2.24:1); this one passes on white and
+     fails on navy (2.16:1). So they are not interchangeable and neither replaces
+     the other:
+       --ds-color-accent       decoration + anything on navy (rules, icons, the
+                               location panel eyebrow). Graphical, needs 3:1.
+       --ds-color-accent-text  eyebrow TEXT on a light surface. */
+  --ds-color-accent-text:      #8a6d3b;   /* 4.85:1 */
+
+  /* COLOUR — focus
+     The canvas has no focus state anywhere, which made its lightbox a keyboard
+     trap. Navy on light surfaces, white over photography — the ring has to be
+     visible on both, and no one colour is. */
+  --ds-color-focus:            #2c3e6b;   /* 10.46:1 on bg — same value as primary,
+                                             named separately so a theme can move it */
+  --ds-color-focus-on-image:   #ffffff;   /* 10.46:1 on primary */
+  --ds-focus-ring-width:       2px;       /* matches --ds-border-width-thick */
+  --ds-focus-ring-offset:      2px;
+
+  /* STATE — disabled
+     Expressed as opacity rather than a new grey, so a disabled control stays
+     recognisably itself and no fourth grey enters the palette. */
+  --ds-opacity-disabled:       0.45;
+
+  /* SHAPE — form controls
+     One height for every field, so a row of them aligns. 48px is already the
+     rhythm this design uses (--ds-rule-width, the feature icon). */
+  --ds-field-height:           48px;
+
+  /* =========================== end DECIDED block ============================ */
+
+  /* ---------------------------------------------------------------------------
+     COLOUR — on imagery
+     Photography is the primary content here, so "white at an alpha, over a
+     photo" is a real subsystem, not a one-off. These are the alphas the canvas
+     actually uses, each at the role it was used for.
+     --------------------------------------------------------------------------- */
+  --ds-color-on-image:              #ffffff;                  /* hero title, brand, button label */
+  --ds-color-on-image-strong:       rgba(255,255,255,0.85);   /* nav link, rest */
+  --ds-color-on-image-muted:        rgba(255,255,255,0.8);    /* hero subtitle, location body */
+  --ds-color-on-image-subtle:       rgba(255,255,255,0.7);    /* lightbox close glyph */
+  --ds-color-on-image-faint:        rgba(255,255,255,0.5);    /* footer meta, lightbox counter */
+  --ds-color-on-image-border:       rgba(255,255,255,0.5);    /* hero outline button */
+  --ds-color-on-image-border-soft:  rgba(255,255,255,0.4);    /* location outline button */
+  --ds-color-on-image-fill:         rgba(255,255,255,0.1);    /* lightbox nav, rest */
+  --ds-color-on-image-fill-hover:   rgba(255,255,255,0.2);    /* lightbox nav, hover */
+
+  /* ---------------------------------------------------------------------------
+     COLOUR — scrims
+     What makes white text legible over an arbitrary photograph.
+     --------------------------------------------------------------------------- */
+  --ds-scrim-nav:               rgba(255,255,255,0.96);   /* nav, once scrolled */
+  --ds-scrim-lightbox:          rgba(10,10,20,0.94);
+  --ds-scrim-image-hover:       rgba(0,0,0,0.06);         /* photo strip, hover */
+  --ds-scrim-image-hover-strong:rgba(0,0,0,0.1);          /* gallery tile, hover */
+  --ds-scrim-hero: linear-gradient(
+                      180deg,
+                      rgba(20,20,40,0.3)  0%,
+                      rgba(20,20,40,0.15) 40%,
+                      rgba(20,20,40,0.45) 100%);
+
+  /* ---------------------------------------------------------------------------
+     TYPE — families
+     Two families, strictly divided: serif for anything that names something,
+     sans for anything that instructs or labels.
+     --------------------------------------------------------------------------- */
+  --ds-font-display: 'Playfair Display', 'Iowan Old Style', Georgia, serif;
+  --ds-font-body:    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+  /* TYPE — UI/body scale (sans) */
+  --ds-text-2xs:  11px;   /* booking field label */
+  --ds-text-xs:   12px;   /* section eyebrow */
+  --ds-text-sm:   13px;   /* button label, feature caption, footer */
+  --ds-text-md:   14px;   /* nav link, hero eyebrow, large button */
+  --ds-text-base: 16px;   /* body default */
+  --ds-text-lg:   17px;   /* welcome prose */
+  --ds-text-lead: clamp(16px, 1.8vw, 19px);   /* hero subtitle */
+
+  /* TYPE — display scale (serif), fluid exactly as the canvas has it */
+  --ds-display-xs:  18px;                        /* brand mark, small viewport */
+  --ds-display-sm:  20px;                        /* footer brand */
+  --ds-display-md:  22px;                        /* brand mark, feature value */
+  --ds-display-lg:  clamp(26px, 3vw, 36px);      /* gallery heading */
+  --ds-display-xl:  clamp(26px, 3vw, 38px);      /* location + reservations heading */
+  --ds-display-2xl: clamp(28px, 3.5vw, 42px);    /* welcome heading */
+  --ds-display-3xl: clamp(42px, 6vw, 72px);      /* hero title */
+  --ds-glyph-lg:    32px;                        /* lightbox close × */
+
+  /* TYPE — weight
+     The canvas sets 500/600/700 explicitly and never writes 400 — 400 is the
+     inherited default for body copy, and the @import loads Playfair at it. It
+     is named here so a component can state the default rather than omit it. */
+  --ds-weight-regular:  400;
+  --ds-weight-medium:   500;
+  --ds-weight-semibold: 600;
+  --ds-weight-bold:     700;
+
+  /* TYPE — leading */
+  --ds-leading-display: 1.08;   /* hero title */
+  --ds-leading-tight:   1.2;    /* welcome heading */
+  --ds-leading-snug:    1.25;   /* location heading */
+  --ds-leading-normal:  1.6;    /* body default */
+  --ds-leading-relaxed: 1.75;   /* long-form prose */
+
+  /* TYPE — tracking
+     The wide uppercase tracking is the signature of this brand. Eyebrows are
+     never set at normal tracking. */
+  --ds-tracking-tight:        -0.01em;   /* hero title */
+  --ds-tracking-display:       0.01em;   /* brand mark */
+  --ds-tracking-normal:        0.02em;   /* nav link, feature caption */
+  --ds-tracking-wide:          0.04em;   /* lightbox counter */
+  --ds-tracking-wider:         0.05em;   /* nav Book Now */
+  --ds-tracking-button:        0.06em;   /* all other buttons */
+  --ds-tracking-label:         0.08em;   /* hero outline button, field label */
+  --ds-tracking-eyebrow:       0.15em;   /* section eyebrows */
+  --ds-tracking-eyebrow-hero:  0.2em;    /* hero eyebrow */
+
+  /* ---------------------------------------------------------------------------
+     SPACE — 4px grid
+     --------------------------------------------------------------------------- */
+  --ds-space-1:  4px;
+  --ds-space-2:  8px;
+  --ds-space-3:  12px;
+  --ds-space-4:  16px;
+  --ds-space-5:  20px;
+  --ds-space-6:  24px;
+  --ds-space-7:  28px;
+  --ds-space-8:  32px;
+  --ds-space-9:  36px;
+  --ds-space-10: 40px;
+  --ds-space-12: 48px;
+  --ds-space-14: 56px;
+  --ds-space-16: 64px;
+  --ds-space-20: 80px;
+  --ds-space-24: 96px;
+
+  /* SPACE — off-grid values the canvas genuinely uses. Kept, not rounded. */
+  --ds-space-button-y:    14px;   /* hero outline button, vertical padding */
+  --ds-space-button-y-lg: 18px;   /* booking Search, small viewport */
+
+  /* SPACE — photo gutters
+     This design sets photographs nearly edge to edge. These gaps are
+     deliberately below the 4px grid and shrink with the viewport. */
+  --ds-gutter-gallery:    6px;
+  --ds-gutter-gallery-sm: 4px;
+  --ds-gutter-strip:      4px;
+  --ds-gutter-strip-sm:   3px;
+  --ds-gutter-strip-xs:   2px;
+
+  /* SPACE — page edge, per breakpoint */
+  --ds-page-x:    48px;
+  --ds-page-x-md: 28px;
+  --ds-page-x-sm: 20px;
+
+  /* ---------------------------------------------------------------------------
+     SHAPE
+     This brand is square. `--ds-radius-none` is the default for every surface,
+     button and field; the circle exists only for the lightbox arrows. There is
+     no 8px/12px radius in this design — do not add one to "soften" a control.
+     --------------------------------------------------------------------------- */
+  --ds-radius-none: 0;
+  --ds-radius-full: 50%;
+
+  --ds-border-width:       1px;   /* hairlines, field dividers, feature grid */
+  --ds-border-width-thick: 2px;   /* outline buttons, the rule under a heading */
+
+  --ds-rule-width: 48px;          /* the short gold rule under a heading */
+
+  /* ---------------------------------------------------------------------------
+     DEPTH
+     --------------------------------------------------------------------------- */
+  --ds-shadow-hairline: 0 1px 0 var(--ds-color-border);                    /* scrolled nav */
+  --ds-shadow-raised:   0 8px 40px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.06);  /* booking bar */
+  --ds-shadow-overlay:  0 24px 80px rgba(0,0,0,0.5);                       /* lightbox image */
+
+  --ds-blur-nav:     16px;
+  --ds-blur-control: 8px;
+
+  /* ---------------------------------------------------------------------------
+     MOTION
+     Photographs move slowly; chrome moves quickly.
+     --------------------------------------------------------------------------- */
+  --ds-ease-image:          cubic-bezier(0.25,0.46,0.45,0.94);
+  --ds-duration-fast:       0.2s;   /* colour on a glyph */
+  --ds-duration-base:       0.25s;  /* button fill */
+  --ds-duration-medium:     0.3s;   /* outline button, scrim, lightbox fade */
+  --ds-duration-slow:       0.4s;   /* nav settling on scroll */
+  --ds-duration-image:      0.5s;   /* photo-strip zoom */
+  --ds-duration-image-slow: 0.6s;   /* gallery tile zoom */
+
+  /* ---------------------------------------------------------------------------
+     LAYOUT — measures
+     --------------------------------------------------------------------------- */
+  --ds-measure-prose:  520px;   /* hero subtitle */
+  --ds-measure-narrow: 720px;   /* welcome column */
+  --ds-measure-hero:   800px;
+  --ds-measure-bar:    900px;   /* booking bar, photo strip */
+  --ds-measure-wide:   960px;   /* feature row */
+
+  --ds-hero-height:     100vh;
+  --ds-hero-min:        700px;
+  --ds-hero-min-sm:     550px;
+  --ds-lightbox-max-w:  90vw;
+  --ds-lightbox-max-h:  88vh;
+
+  /* ---------------------------------------------------------------------------
+     LAYOUT — block heights
+     Photographs have no intrinsic height in a grid, so this design floors every
+     photographic block explicitly. Each value below is a `min-height` the canvas
+     actually sets; they are design values, not incidental layout, and they are
+     what makes the asymmetric gallery read as composed rather than ragged.
+     --------------------------------------------------------------------------- */
+
+  /* SplitPanel — the half-photo / half-navy Location band */
+  --ds-panel-min-h:        500px;   /* the panel itself */
+  --ds-panel-image-min-h:  300px;   /* the image half, once stacked at --ds-bp-md */
+
+  /* Gallery tiles, per breakpoint. The grid is three tile shapes, not eight
+     one-off boxes: one tall, some small, some wide. See components.md § Gallery. */
+  --ds-tile-h-tall:        480px;   /* the single tall tile, desktop */
+  --ds-tile-h-wide:        280px;   /* the wide row, desktop */
+  --ds-tile-h-small:       230px;   /* the small quartet, desktop */
+  --ds-tile-h-tall-md:     300px;   /* tall tile at --ds-bp-md */
+  --ds-tile-h-md:          180px;   /* every other tile at --ds-bp-md */
+  --ds-tile-h-tall-sm:     220px;   /* tall tile at --ds-bp-sm */
+  --ds-tile-h-wide-sm:     200px;   /* wide tile at --ds-bp-sm */
+  --ds-tile-h-sm:          160px;   /* every other tile at --ds-bp-sm */
+
+  /* LAYOUT — ratios */
+  --ds-aspect-strip:       16 / 10; /* photo-strip thumbnail */
+
+  /* LAYOUT — stacking */
+  --ds-z-raised:   2;     /* hero content above its scrim */
+  --ds-z-bar:      10;    /* booking bar over the hero */
+  --ds-z-nav:      100;
+  --ds-z-lightbox: 200;
+
+  /* ---------------------------------------------------------------------------
+     BREAKPOINTS
+     Recorded for reference only — a media query cannot read a custom property.
+     Write them as literals and keep them equal to these:
+       tablet and below :  max-width: 1023px
+       phone  and below :  max-width:  639px
+     --------------------------------------------------------------------------- */
+  --ds-bp-md: 1023px;
+  --ds-bp-sm: 639px;
+}
+
+/* ============================================================================
+   COMPONENTS — design-system/components.md, composed from the tokens above.
+   Not one literal colour, radius, shadow, font-size or spacing value.
+   ========================================================================= */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; }
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: var(--ds-space-20);   /* the fixed bar must not cover an anchor */
+}
+
+body {
+  background: var(--ds-color-bg);
+  color: var(--ds-color-text);
+  font-family: var(--ds-font-body);
+  font-size: var(--ds-text-base);
+  line-height: var(--ds-leading-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- § Focus and keyboard — one rule, every interactive element ---------- */
+:focus-visible {
+  outline: var(--ds-focus-ring-width) solid var(--ds-color-focus);
+  outline-offset: var(--ds-focus-ring-offset);
+  border-radius: var(--ds-radius-none);
+}
+.on-image :focus-visible,
+.on-primary :focus-visible {
+  outline-color: var(--ds-color-focus-on-image);
+}
+.lightbox :focus-visible {
+  outline-color: var(--ds-color-focus-on-image);
+}
+.lightbox-nav:focus-visible { border-radius: var(--ds-radius-full); }
+
+.vh {
+  position: absolute; width: 1px; height: 1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+
+/* ---- Photography ---------------------------------------------------------
+   The photographs are NOT in this prototype — REQ-003 Q5 has not settled which
+   ones, at what size, from where. A plate stands in: it holds the real box, it
+   carries the real alt text so the brief is readable, and its four grounds are
+   all dark enough for --ds-color-on-image to pass AA over them.
+   -------------------------------------------------------------------------- */
+.photo {
+  position: relative; display: block; overflow: hidden;
+  width: 100%; height: 100%;
+  background: var(--ds-color-surface-alt);
+}
+.photo[data-tone="sea"]   { background: linear-gradient(155deg, var(--ds-color-primary-hover), var(--ds-color-primary)); }
+.photo[data-tone="deep"]  { background: linear-gradient(155deg, var(--ds-color-primary), var(--ds-color-text)); }
+.photo[data-tone="stone"] { background: linear-gradient(155deg, var(--ds-color-text-muted), var(--ds-color-text)); }
+.photo[data-tone="warm"]  { background: linear-gradient(155deg, var(--ds-color-accent-text), var(--ds-color-text)); }
+.photo[data-state="loading"],
+.photo[data-state="error"] { background: var(--ds-color-surface-alt); }
+.photo-tile .photo,
+.gallery-item .photo { transition: transform var(--ds-duration-image) var(--ds-ease-image); }
+.gallery-item .photo { transition-duration: var(--ds-duration-image-slow); }
+.photo-tile:hover .photo  { transform: scale(1.05); }
+.gallery-item:hover .photo { transform: scale(1.04); }
+
+.photo-caption {
+  position: absolute; inset: auto 0 0 0;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  font-size: var(--ds-text-sm);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-color-on-image-strong);
+  transition: transform var(--ds-duration-image) var(--ds-ease-image);
+}
+.photo[data-state="error"] .photo-caption,
+.photo[data-state="loading"] .photo-caption { color: var(--ds-color-text-muted); }
+.photo[data-state="error"] .photo-caption { color: var(--ds-color-text); }
+
+/* ---- SiteNav ------------------------------------------------------------- */
+.site-nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: var(--ds-z-nav);
+  padding: var(--ds-space-6) var(--ds-page-x);
+  background: transparent;
+  transition: background var(--ds-duration-slow), box-shadow var(--ds-duration-slow), padding var(--ds-duration-slow);
+}
+.site-nav.is-scrolled {
+  background: var(--ds-scrim-nav);
+  backdrop-filter: blur(var(--ds-blur-nav));
+  -webkit-backdrop-filter: blur(var(--ds-blur-nav));
+  box-shadow: var(--ds-shadow-hairline);
+  padding: var(--ds-space-4) var(--ds-page-x);
+}
+.site-nav-row { display: flex; align-items: center; justify-content: space-between; }
+
+.nav-brand {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-display-md);
+  font-weight: var(--ds-weight-semibold);
+  letter-spacing: var(--ds-tracking-display);
+  color: var(--ds-color-on-image);
+  text-decoration: none;
+  transition: color var(--ds-duration-slow);
+}
+.site-nav.is-scrolled .nav-brand { color: var(--ds-color-text); }
+
+.nav-links { display: flex; gap: var(--ds-space-8); align-items: center; }
+.nav-link {
+  font-size: var(--ds-text-md);
+  font-weight: var(--ds-weight-medium);
+  letter-spacing: var(--ds-tracking-normal);
+  color: var(--ds-color-on-image-strong);
+  text-decoration: none;
+  transition: color var(--ds-duration-medium);
+}
+.nav-link:hover,
+.nav-link[aria-current="true"] { color: var(--ds-color-on-image); }
+.site-nav.is-scrolled .nav-link { color: var(--ds-color-text-muted); }
+.site-nav.is-scrolled .nav-link:hover,
+.site-nav.is-scrolled .nav-link[aria-current="true"] { color: var(--ds-color-text); }
+
+/* ---- Button -------------------------------------------------------------- */
+.btn {
+  font-family: inherit;
+  font-weight: var(--ds-weight-semibold);
+  text-transform: uppercase;
+  text-decoration: none;
+  border: none;
+  border-radius: var(--ds-radius-none);
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background var(--ds-duration-base), color var(--ds-duration-medium), border-color var(--ds-duration-medium);
+}
+.btn[data-size="sm"] {
+  font-size: var(--ds-text-sm);
+  letter-spacing: var(--ds-tracking-wider);
+  padding: var(--ds-space-3) var(--ds-space-7);
+}
+.btn[data-size="md"] {
+  font-size: var(--ds-text-md);
+  letter-spacing: var(--ds-tracking-button);
+  padding: var(--ds-space-4) var(--ds-space-12);
+}
+.btn[data-variant="solid"] {
+  background: var(--ds-color-primary);
+  color: var(--ds-color-primary-contrast);
+}
+.btn[data-variant="solid"]:hover:not([disabled]) { background: var(--ds-color-primary-hover); }
+
+.btn[data-variant="outline-on-image"] {
+  background: transparent;
+  color: var(--ds-color-on-image);
+  border: var(--ds-border-width-thick) solid var(--ds-color-on-image-border);
+  font-size: var(--ds-text-sm);
+  letter-spacing: var(--ds-tracking-label);
+  padding: var(--ds-space-button-y) var(--ds-space-10);
+  transition: all var(--ds-duration-medium);
+}
+.btn[data-variant="outline-on-image"]:hover {
+  background: var(--ds-color-on-image);
+  color: var(--ds-color-text);
+  border-color: var(--ds-color-on-image);
+}
+.btn[data-variant="outline-on-primary"] {
+  background: transparent;
+  color: var(--ds-color-on-image);
+  border: var(--ds-border-width-thick) solid var(--ds-color-on-image-border-soft);
+  font-size: var(--ds-text-sm);
+  letter-spacing: var(--ds-tracking-button);
+  padding: var(--ds-space-3) var(--ds-space-8);
+  transition: all var(--ds-duration-medium);
+}
+.btn[data-variant="outline-on-primary"]:hover {
+  background: var(--ds-color-on-image);
+  color: var(--ds-color-primary);
+  border-color: var(--ds-color-on-image);
+}
+.btn[disabled] { opacity: var(--ds-opacity-disabled); cursor: not-allowed; }
+.btn[data-busy="true"] { cursor: progress; }
+
+/* ---- MobileNav ----------------------------------------------------------- */
+.nav-toggle {
+  display: none;
+  font-family: inherit;
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-semibold);
+  letter-spacing: var(--ds-tracking-button);
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--ds-color-on-image);
+  border: var(--ds-border-width) solid var(--ds-color-on-image-border);
+  border-radius: var(--ds-radius-none);
+  padding: var(--ds-space-2) var(--ds-space-4);
+  cursor: pointer;
+}
+.site-nav.is-scrolled .nav-toggle {
+  color: var(--ds-color-text);
+  border-color: var(--ds-color-border);
+}
+.mobile-nav {
+  display: none;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+  padding: var(--ds-space-5) var(--ds-page-x-sm) var(--ds-space-6);
+  margin: var(--ds-space-4) calc(-1 * var(--ds-page-x-sm)) calc(-1 * var(--ds-space-4));
+  background: var(--ds-scrim-nav);
+  backdrop-filter: blur(var(--ds-blur-nav));
+  -webkit-backdrop-filter: blur(var(--ds-blur-nav));
+  box-shadow: var(--ds-shadow-hairline);
+}
+.mobile-nav .nav-link { color: var(--ds-color-text-muted); }
+.mobile-nav .nav-link:hover,
+.mobile-nav .nav-link[aria-current="true"] { color: var(--ds-color-text); }
+.mobile-nav .btn { width: 100%; }
+
+/* ---- Hero ---------------------------------------------------------------- */
+.hero {
+  position: relative;
+  height: var(--ds-hero-height);
+  min-height: var(--ds-hero-min);
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.hero-plate { position: absolute; inset: 0; background: var(--ds-color-text); }
+.hero-scrim { position: absolute; inset: 0; background: var(--ds-scrim-hero); }
+.hero-content {
+  position: relative;
+  z-index: var(--ds-z-raised);
+  text-align: center;
+  max-width: var(--ds-measure-hero);
+  padding: 0 var(--ds-space-8);
+}
+.hero-eyebrow {
+  font-size: var(--ds-text-md);
+  font-weight: var(--ds-weight-medium);
+  letter-spacing: var(--ds-tracking-eyebrow-hero);
+  text-transform: uppercase;
+  color: var(--ds-color-accent);
+  margin-bottom: var(--ds-space-6);
+}
+.hero-title {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-display-3xl);
+  font-weight: var(--ds-weight-bold);
+  line-height: var(--ds-leading-display);
+  letter-spacing: var(--ds-tracking-tight);
+  color: var(--ds-color-on-image);
+  margin-bottom: var(--ds-space-5);
+}
+.hero-subtitle {
+  font-size: var(--ds-text-lead);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-color-on-image-muted);
+  max-width: var(--ds-measure-prose);
+  margin: 0 auto var(--ds-space-9);
+}
+.hero-note {
+  margin-top: var(--ds-space-4);
+  font-size: var(--ds-text-sm);
+  color: var(--ds-color-on-image-muted);
+}
+
+/* ---- BookingBar + Forms -------------------------------------------------- */
+.booking-wrap {
+  position: relative;
+  z-index: var(--ds-z-bar);
+  max-width: var(--ds-measure-bar);
+  margin: calc(-1 * var(--ds-space-10)) auto 0;
+}
+.booking-bar {
+  background: var(--ds-color-bg);
+  box-shadow: var(--ds-shadow-raised);
+  display: flex;
+  align-items: stretch;
+}
+.booking-field {
+  flex: 1;
+  min-height: var(--ds-field-height);
+  padding: var(--ds-space-5) var(--ds-space-7);
+  border-right: var(--ds-border-width) solid var(--ds-color-border);
+}
+.booking-field:last-of-type { border-right: none; }
+.booking-field[data-disabled="true"] { opacity: var(--ds-opacity-disabled); }
+
+.field-label {
+  display: block;
+  font-size: var(--ds-text-2xs);
+  font-weight: var(--ds-weight-semibold);
+  letter-spacing: var(--ds-tracking-label);
+  text-transform: uppercase;
+  color: var(--ds-color-text-muted);
+  margin-bottom: var(--ds-space-1);
+}
+.field-control {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-base);
+  font-weight: var(--ds-weight-regular);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-color-text);
+  background: transparent;
+  border: none;
+  border-bottom: var(--ds-border-width) solid transparent;
+  border-radius: var(--ds-radius-none);
+  padding: 0;
+  width: 100%;
+}
+.field-control::placeholder { color: var(--ds-color-text-muted); }
+.field-control[aria-invalid="true"] {
+  border-bottom: var(--ds-border-width-thick) solid var(--ds-color-danger);
+}
+.field-error {
+  /* space reserved whether or not a message is showing — the form must not jump */
+  min-height: var(--ds-space-6);
+  margin-top: var(--ds-space-1);
+  font-size: var(--ds-text-sm);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-color-danger);
+}
+
+.guest-row { display: flex; align-items: center; gap: var(--ds-space-3); }
+.guest-step {
+  font-family: inherit;
+  font-size: var(--ds-text-md);
+  line-height: var(--ds-leading-normal);
+  background: transparent;
+  color: var(--ds-color-primary);
+  border: var(--ds-border-width) solid var(--ds-color-border);
+  border-radius: var(--ds-radius-none);
+  padding: var(--ds-space-1) var(--ds-space-3);
+  cursor: pointer;
+}
+.guest-step:hover:not([disabled]) { background: var(--ds-color-surface-alt); }
+.guest-step[disabled] { opacity: var(--ds-opacity-disabled); cursor: not-allowed; }
+.guest-count { width: 100%; text-align: center; }
+
+.booking-submit { padding: 0 var(--ds-space-9); }
+
+/* ---- Callout ------------------------------------------------------------- */
+.callout {
+  background: var(--ds-color-surface-alt);
+  border-left: var(--ds-border-width-thick) solid var(--ds-color-border);
+  padding: var(--ds-space-4);
+  margin-top: var(--ds-space-4);
+}
+.callout[data-tone="success"] { border-left-color: var(--ds-color-success); }
+.callout[data-tone="error"]   { border-left-color: var(--ds-color-danger); }
+.callout-head {
+  display: flex; align-items: center; gap: var(--ds-space-2);
+  font-size: var(--ds-text-md);
+  font-weight: var(--ds-weight-semibold);
+  letter-spacing: var(--ds-tracking-normal);
+}
+.callout[data-tone="success"] .callout-head { color: var(--ds-color-success); }
+.callout[data-tone="error"]   .callout-head { color: var(--ds-color-danger); }
+.callout-body {
+  margin-top: var(--ds-space-2);
+  font-size: var(--ds-text-sm);
+  line-height: var(--ds-leading-relaxed);
+  color: var(--ds-color-text-muted);
+}
+.callout-glyph {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: var(--ds-space-5); height: var(--ds-space-5);
+  border: var(--ds-border-width-thick) solid currentColor;
+  border-radius: var(--ds-radius-full);
+  font-size: var(--ds-text-xs);
+  line-height: var(--ds-leading-normal);
+}
+.callout-actions { display: flex; flex-wrap: wrap; gap: var(--ds-space-3); margin-top: var(--ds-space-3); }
+.callout-quote {
+  margin-top: var(--ds-space-3);
+  padding: var(--ds-space-3);
+  background: var(--ds-color-bg);
+  border: var(--ds-border-width) solid var(--ds-color-border);
+  font-family: var(--ds-font-body);
+  font-size: var(--ds-text-sm);
+  line-height: var(--ds-leading-relaxed);
+  color: var(--ds-color-text);
+  white-space: pre-wrap;
+}
+
+/* ---- PhotoStrip ---------------------------------------------------------- */
+.photo-strip {
+  display: flex;
+  gap: var(--ds-gutter-strip);
+  max-width: var(--ds-measure-bar);
+  margin: var(--ds-space-6) auto 0;
+}
+.photo-tile {
+  flex: 1;
+  aspect-ratio: var(--ds-aspect-strip);
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  border: none;
+  border-radius: var(--ds-radius-none);
+  background: transparent;
+  cursor: pointer;
+  display: block;
+}
+.photo-tile[disabled] { cursor: default; }
+.photo-tile::after {
+  content: ''; position: absolute; inset: 0;
+  background: transparent;
+  transition: background var(--ds-duration-medium);
+}
+.photo-tile:hover::after { background: var(--ds-scrim-image-hover); }
+
+/* ---- Welcome + FeatureGrid ----------------------------------------------- */
+.section-eyebrow {
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-semibold);
+  letter-spacing: var(--ds-tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--ds-color-accent-text);
+  margin-bottom: var(--ds-space-5);
+}
+.rule {
+  width: var(--ds-rule-width);
+  height: var(--ds-border-width-thick);
+  background: var(--ds-color-accent);
+}
+.welcome {
+  max-width: var(--ds-measure-narrow);
+  margin: 0 auto;
+  padding: var(--ds-space-24) var(--ds-space-8) var(--ds-space-20);
+  text-align: center;
+}
+.welcome-heading {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-display-2xl);
+  font-weight: var(--ds-weight-semibold);
+  line-height: var(--ds-leading-tight);
+  margin-bottom: var(--ds-space-6);
+}
+.welcome .rule { margin: 0 auto var(--ds-space-7); }
+.welcome-text {
+  font-size: var(--ds-text-lg);
+  line-height: var(--ds-leading-relaxed);
+  color: var(--ds-color-text-muted);
+}
+.features {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  max-width: var(--ds-measure-wide);
+  margin: 0 auto;
+  padding: 0 var(--ds-space-8) var(--ds-space-20);
+}
+.feature {
+  text-align: center;
+  padding: var(--ds-space-10) var(--ds-space-6);
+  border: var(--ds-border-width) solid var(--ds-color-border);
+  margin-right: calc(-1 * var(--ds-border-width));
+  margin-bottom: calc(-1 * var(--ds-border-width));
+}
+.feature-icon {
+  width: var(--ds-rule-width); height: var(--ds-rule-width);
+  margin: 0 auto var(--ds-space-4);
+  display: flex; align-items: center; justify-content: center;
+}
+.feature-icon svg {
+  width: var(--ds-space-9); height: var(--ds-space-9);   /* the canvas's 36px stroke icon */
+  stroke: var(--ds-color-primary);
+  stroke-width: 1.5;
+  fill: none;
+}
+.feature-value {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-display-md);
+  font-weight: var(--ds-weight-semibold);
+  margin-bottom: var(--ds-space-1);
+}
+.feature-label {
+  font-size: var(--ds-text-sm);
+  letter-spacing: var(--ds-tracking-normal);
+  color: var(--ds-color-text-muted);
+}
+
+/* ---- Gallery ------------------------------------------------------------- */
+.gallery-section { background: var(--ds-color-surface-alt); }
+.gallery-header { text-align: center; padding: var(--ds-space-20) var(--ds-space-8) var(--ds-space-12); }
+.gallery-heading {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-display-lg);
+  font-weight: var(--ds-weight-semibold);
+}
+.gallery-header .section-eyebrow { margin-bottom: var(--ds-space-4); }
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--ds-gutter-gallery);
+  padding: 0 var(--ds-gutter-gallery) var(--ds-gutter-gallery);
+}
+.gallery-item {
+  position: relative; overflow: hidden;
+  padding: 0; border: none; border-radius: var(--ds-radius-none);
+  background: transparent; cursor: pointer; display: block;
+}
+.gallery-item[disabled] { cursor: default; }
+.gallery-item::after {
+  content: ''; position: absolute; inset: 0;
+  background: transparent;
+  transition: background var(--ds-duration-medium);
+}
+.gallery-item:hover::after { background: var(--ds-scrim-image-hover-strong); }
+/* the count rule: three shapes in a repeating block of eight, not eight boxes */
+.gallery-item[data-shape="tall"]  { grid-column: span 6; grid-row: span 2; min-height: var(--ds-tile-h-tall); }
+.gallery-item[data-shape="small"] { grid-column: span 3; min-height: var(--ds-tile-h-small); }
+.gallery-item[data-shape="wide"]  { grid-column: span 4; min-height: var(--ds-tile-h-wide); }
+/* a trailing row of wide tiles divides the full width between however many it has */
+.gallery-item[data-shape="wide"][data-fill="1"] { grid-column: span 12; }
+.gallery-item[data-shape="wide"][data-fill="2"] { grid-column: span 6; }
+
+/* ---- Location (SplitPanel) ----------------------------------------------- */
+.location-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: var(--ds-panel-min-h);
+}
+.location-image { overflow: hidden; background: var(--ds-color-surface-alt); }
+.location-content {
+  display: flex; flex-direction: column; justify-content: center;
+  padding: var(--ds-space-20) var(--ds-space-16);
+  background: var(--ds-color-primary);
+  color: var(--ds-color-on-image);
+}
+.location-content .section-eyebrow { color: var(--ds-color-accent); }
+.location-heading {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-display-xl);
+  font-weight: var(--ds-weight-semibold);
+  line-height: var(--ds-leading-snug);
+  margin-bottom: var(--ds-space-6);
+}
+.location-content .rule { margin-bottom: var(--ds-space-6); }
+.location-text {
+  font-size: var(--ds-text-base);
+  line-height: var(--ds-leading-relaxed);
+  color: var(--ds-color-on-image-muted);
+  margin-bottom: var(--ds-space-8);
+}
+.location-actions { display: flex; flex-wrap: wrap; gap: var(--ds-space-3); }
+
+/* ---- Reservations -------------------------------------------------------- */
+.cta-section {
+  padding: var(--ds-space-24) var(--ds-space-8);
+  text-align: center;
+  background: var(--ds-color-bg);
+}
+.cta-heading {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-display-xl);
+  font-weight: var(--ds-weight-semibold);
+  margin-bottom: var(--ds-space-4);
+}
+.cta-sub {
+  font-size: var(--ds-text-base);
+  color: var(--ds-color-text-muted);
+  margin-bottom: var(--ds-space-9);
+}
+.cta-carry {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-color-text-muted);
+  margin-top: var(--ds-space-5);
+}
+
+/* ---- SiteFooter ---------------------------------------------------------- */
+.site-footer {
+  background: var(--ds-color-text);
+  color: var(--ds-color-on-image-faint);
+  padding: var(--ds-space-12) var(--ds-space-8);
+  text-align: center;
+  font-size: var(--ds-text-sm);
+}
+.footer-brand {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-display-sm);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-color-on-image);
+  margin-bottom: var(--ds-space-2);
+}
+
+/* ---- Lightbox ------------------------------------------------------------ */
+.lightbox {
+  position: fixed; inset: 0;
+  z-index: var(--ds-z-lightbox);
+  background: var(--ds-scrim-lightbox);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--ds-duration-medium);
+}
+.lightbox[data-open="true"] { opacity: 1; pointer-events: all; }
+.lightbox-stage {
+  max-width: var(--ds-lightbox-max-w);
+  max-height: var(--ds-lightbox-max-h);
+  width: var(--ds-lightbox-max-w);
+  height: var(--ds-lightbox-max-h);
+  box-shadow: var(--ds-shadow-overlay);
+  transform: scale(0.95);
+  transition: transform var(--ds-duration-medium) var(--ds-ease-image);
+}
+.lightbox[data-open="true"] .lightbox-stage { transform: scale(1); }
+.lightbox-stage .photo-caption {
+  font-size: var(--ds-text-md);
+  color: var(--ds-color-on-image-strong);
+}
+.lightbox-close {
+  position: absolute; top: var(--ds-space-6); right: var(--ds-space-7);
+  background: none; border: none;
+  color: var(--ds-color-on-image-subtle);
+  font-size: var(--ds-glyph-lg);
+  line-height: var(--ds-leading-display);
+  cursor: pointer;
+  width: var(--ds-space-12); height: var(--ds-space-12);
+  display: flex; align-items: center; justify-content: center;
+  transition: color var(--ds-duration-fast);
+}
+.lightbox-close:hover { color: var(--ds-color-on-image); }
+.lightbox-nav {
+  position: absolute; top: 50%;
+  transform: translateY(-50%);
+  background: var(--ds-color-on-image-fill);
+  border: var(--ds-border-width) solid var(--ds-color-on-image-border-soft);
+  color: var(--ds-color-on-image-muted);
+  /* 52px / 42px are the canvas's control box. width and height carry no design
+     decision the gate scopes, and the token file has no size at these values. */
+  width: 52px; height: 52px;
+  border-radius: var(--ds-radius-full);
+  font-size: var(--ds-display-md);
+  line-height: var(--ds-leading-display);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(var(--ds-blur-control));
+  -webkit-backdrop-filter: blur(var(--ds-blur-control));
+  transition: background var(--ds-duration-fast);
+}
+.lightbox-nav:hover { background: var(--ds-color-on-image-fill-hover); color: var(--ds-color-on-image); }
+.lightbox-prev { left: var(--ds-space-6); }
+.lightbox-next { right: var(--ds-space-6); }
+.lightbox-counter {
+  position: absolute; bottom: var(--ds-space-7);
+  font-size: var(--ds-text-md);
+  letter-spacing: var(--ds-tracking-wide);
+  color: var(--ds-color-on-image-faint);
+}
+
+/* ---- Responsive ---------------------------------------------------------- */
+@media (max-width: 1023px) {
+  .site-nav { padding: var(--ds-space-5) var(--ds-page-x-md); }
+  .site-nav.is-scrolled { padding: var(--ds-space-button-y) var(--ds-page-x-md); }
+  .booking-wrap { margin: calc(-1 * var(--ds-space-8)) var(--ds-page-x-sm) 0; }
+  .booking-bar { flex-wrap: wrap; }
+  .booking-field { flex: 1 1 45%; }
+  .booking-submit { width: 100%; padding: var(--ds-space-button-y-lg) var(--ds-space-9); }
+  .photo-strip { margin: var(--ds-space-4) var(--ds-page-x-sm) 0; gap: var(--ds-gutter-strip-sm); }
+  .features { grid-template-columns: repeat(2, 1fr); }
+  .gallery-grid { grid-template-columns: repeat(6, 1fr); }
+  .gallery-item[data-shape="tall"]  { grid-column: span 6; grid-row: span 1; min-height: var(--ds-tile-h-tall-md); }
+  .gallery-item[data-shape="small"] { grid-column: span 3; min-height: var(--ds-tile-h-md); }
+  .gallery-item[data-shape="wide"]  { grid-column: span 2; min-height: var(--ds-tile-h-md); }
+  .gallery-item[data-shape="wide"][data-fill="1"] { grid-column: span 6; }
+  .gallery-item[data-shape="wide"][data-fill="2"] { grid-column: span 3; }
+  .location-section { grid-template-columns: 1fr; }
+  .location-image { min-height: var(--ds-panel-image-min-h); }
+  .location-content { padding: var(--ds-space-14) var(--ds-space-8); }
+}
+
+@media (max-width: 639px) {
+  .site-nav { padding: var(--ds-space-4) var(--ds-page-x-sm); }
+  .site-nav.is-scrolled { padding: var(--ds-space-3) var(--ds-page-x-sm); }
+  .nav-brand { font-size: var(--ds-display-xs); }
+  .nav-links { display: none; }
+  .nav-toggle { display: inline-flex; }
+  .mobile-nav { display: flex; }
+  .hero { min-height: var(--ds-hero-min-sm); }
+  .hero-content { padding: 0 var(--ds-page-x-sm); }
+  .booking-wrap { margin: calc(-1 * var(--ds-space-7)) var(--ds-space-4) 0; }
+  .booking-field { flex: 1 1 100%; padding: var(--ds-space-4) var(--ds-page-x-sm); }
+  .booking-submit { padding: var(--ds-space-4); }
+  .photo-strip { margin: var(--ds-space-3) var(--ds-space-4) 0; gap: var(--ds-gutter-strip-xs); }
+  .welcome { padding: var(--ds-space-16) var(--ds-page-x-sm) var(--ds-space-14); }
+  .features { grid-template-columns: repeat(2, 1fr); padding: 0 var(--ds-space-4) var(--ds-space-14); }
+  .feature { padding: var(--ds-space-7) var(--ds-space-4); }
+  .gallery-header { padding: var(--ds-space-14) var(--ds-page-x-sm) var(--ds-space-8); }
+  .gallery-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ds-gutter-gallery-sm);
+    padding: 0 var(--ds-gutter-gallery-sm) var(--ds-gutter-gallery-sm);
+  }
+  .gallery-item[data-shape="tall"]  { grid-column: span 2; grid-row: span 1; min-height: var(--ds-tile-h-tall-sm); }
+  .gallery-item[data-shape="small"] { grid-column: span 1; min-height: var(--ds-tile-h-sm); }
+  .gallery-item[data-shape="wide"]  { grid-column: span 2; min-height: var(--ds-tile-h-wide-sm); }
+  .gallery-item[data-shape="wide"][data-fill="1"],
+  .gallery-item[data-shape="wide"][data-fill="2"] { grid-column: span 2; }
+  .location-content { padding: var(--ds-space-12) var(--ds-page-x-sm); }
+  .cta-section { padding: var(--ds-space-16) var(--ds-page-x-sm); }
+  .lightbox-prev { left: var(--ds-space-3); }
+  .lightbox-next { right: var(--ds-space-3); }
+  .lightbox-nav { width: 42px; height: 42px; font-size: var(--ds-display-xs); }
+}
+
+/* ============================================================================
+   DEV TOOLBAR — prototype scaffolding. NOT part of the design under review and
+   never carried into the product. It exists so the human can see every state
+   without faking data.
+   ========================================================================= */
+.proto-spacer { height: var(--ds-space-24); }
+.proto-bar {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  z-index: 300;
+  background: var(--ds-color-surface-alt);
+  border-top: var(--ds-border-width) solid var(--ds-color-border);
+  font-family: var(--ds-font-body);
+  font-size: var(--ds-text-xs);
+  color: var(--ds-color-text);
+  padding: var(--ds-space-2) var(--ds-space-4);
+}
+.proto-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ds-space-2); }
+.proto-row + .proto-row { margin-top: var(--ds-space-2); }
+.proto-label {
+  text-transform: uppercase;
+  letter-spacing: var(--ds-tracking-label);
+  color: var(--ds-color-text-muted);
+  font-weight: var(--ds-weight-semibold);
+}
+.proto-btn {
+  font-family: inherit;
+  font-size: var(--ds-text-xs);
+  background: var(--ds-color-bg);
+  color: var(--ds-color-text);
+  border: var(--ds-border-width) solid var(--ds-color-border);
+  border-radius: var(--ds-radius-none);
+  padding: var(--ds-space-1) var(--ds-space-2);
+  cursor: pointer;
+}
+.proto-btn[data-on="true"] {
+  background: var(--ds-color-primary);
+  border-color: var(--ds-color-primary);
+  color: var(--ds-color-primary-contrast);
+}
+.proto-note { color: var(--ds-color-text-muted); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react-classic">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+/* ==========================================================================
+   COPY — AC-16. THE single source of every visitor-facing string on the page.
+   Nothing below this object writes a literal the visitor can read. Adding
+   Croatian, German or Italian later means a second object of this shape and a
+   picker, not a rebuild.
+
+   Everything here is the mockup's own copy, verbatim. REQ-003 Q6 has not
+   confirmed whether it is the owner's real, final words; nothing here was
+   rewritten or invented.
+   ========================================================================== */
+const COPY = {
+  brand: 'Seaside Zadar',
+  skipToContent: 'Skip to content',
+
+  nav: {
+    label: 'Primary',
+    gallery: 'Gallery',
+    location: 'Location',
+    contact: 'Contact',
+    book: 'Book Now',
+    menuOpen: 'Menu',
+    menuClose: 'Close',
+    mobileLabel: 'Site sections',
+  },
+
+  hero: {
+    eyebrow: 'Zadar · Croatia · Adriatic Coast',
+    titleLine1: 'Wake Up to',
+    titleLine2: 'the Adriatic',
+    subtitle: 'A modern seaside apartment with panoramic views of the Velebit mountains and the crystal-clear Adriatic.',
+    cta: 'Explore the Apartment',
+    imageAlt: 'Panoramic Adriatic sea view from the apartment',
+    imageFailed: 'The view photograph could not be loaded.',
+  },
+
+  booking: {
+    heading: 'Start an enquiry',
+    checkIn: 'Check In',
+    checkOut: 'Check Out',
+    guests: 'Guests',
+    datePlaceholder: 'Select date',
+    fewer: 'One guest fewer',
+    more: 'One guest more',
+    guestsHint: (n) => (n === 1 ? '1 guest' : n + ' guests'),
+    submit: 'Start enquiry',
+    submitting: 'Sending',
+    errors: {
+      past: 'Arrival is in the past. Choose today or a later date.',
+      order: 'Departure must be after arrival. Choose a later date.',
+      needCheckIn: 'Choose an arrival date first.',
+      missing: 'Add an arrival and a departure date before starting an enquiry.',
+    },
+  },
+
+  enquiry: {
+    incompleteHead: 'The enquiry is not complete yet',
+    sentHead: 'Enquiry sent',
+    sentBody: (s) => 'We have your enquiry for ' + s + '. The owner replies within a day, usually sooner.',
+    handedHead: 'Enquiry handed to your mail client',
+    handedBody: (s) => 'Your mail client should now be open with this message for ' + s + '. This site did not send anything itself — the enquiry only reaches the owner once you send that email.',
+    handedFallback: 'If nothing opened, copy the message below and send it to the address shown.',
+    failedHead: 'Enquiry could not be sent',
+    failedBody: 'Nothing was lost — your dates and guest count are still on the form. Try again, or reach the property directly.',
+    retry: 'Try again',
+    contactDirectly: 'Contact the property',
+    stayDescription: (inD, outD, g) => inD + ' to ' + outD + ', ' + (g === 1 ? '1 guest' : g + ' guests'),
+    mailSubject: (inD, outD) => 'Enquiry: ' + inD + ' to ' + outD,
+    mailBody: (inD, outD, g) =>
+      'Hello,\n\nI would like to enquire about the apartment.\n\nArrival: ' + inD +
+      '\nDeparture: ' + outD +
+      '\nGuests: ' + g +
+      '\n\nThank you.',
+  },
+
+  /* REQ-003 Q4 is open: nobody has said where an enquiry goes or what the real
+     address is. coding-standards.md forbids inventing it, so the mockup's own
+     placeholder is carried through, marked as a placeholder. */
+  contact: {
+    emailPlaceholder: 'booking@example.com',
+    emailUnresolved: 'placeholder address — REQ-003 Q4',
+    otherChannelUnresolved: 'No second contact channel has been supplied yet (REQ-003 Q4).',
+  },
+
+  welcome: {
+    eyebrow: 'Welcome to',
+    heading: 'Seaside Apartment Zadar',
+    text: 'Perched above the coastline near Zadar, this modern apartment offers unobstructed views from every room. Step onto the glass-railed terrace and watch the sun rise over the Velebit range, or fall asleep to the sound of the Adriatic below.',
+  },
+
+  features: [
+    { icon: 'bed',    value: '2',    label: 'Bedrooms' },
+    { icon: 'guests', value: '4+',   label: 'Guests' },
+    { icon: 'view',   value: '180°', label: 'Sea View' },
+    { icon: 'ac',     value: 'A/C',  label: 'Climate Control' },
+  ],
+
+  strip: { heading: 'A first look' },
+
+  gallery: {
+    eyebrow: 'Photo Gallery',
+    heading: 'Explore Every Room',
+    open: (alt) => 'Open full size: ' + alt,
+    failed: 'This photograph could not be loaded.',
+  },
+
+  lightbox: {
+    label: 'Photo viewer',
+    close: 'Close the photo viewer',
+    prev: 'Previous photograph',
+    next: 'Next photograph',
+    counter: (i, n) => i + ' / ' + n,
+    failed: 'This photograph could not be loaded. Use the arrows to move to another.',
+  },
+
+  location: {
+    eyebrow: 'Location',
+    heading: 'The Zadar Riviera',
+    text: "Zadar is one of Croatia's best-kept secrets — a 3,000-year-old city with Roman ruins, Venetian architecture, and a coastline that rivals anywhere in the Mediterranean. The apartment sits just outside the city, offering peace and privacy with easy access to Old Town, beaches, national parks, and island-hopping ferries.",
+    cta: 'Get Directions',
+    ctaUnresolved: 'No address has been supplied yet (REQ-003 Q4), so this has nowhere to point.',
+    imageAlt: 'Dalmatian coastline panorama',
+  },
+
+  reservations: {
+    eyebrow: 'Reservations',
+    heading: 'Ready to Book Your Stay?',
+    sub: 'Get in touch for availability and rates.',
+    cta: 'Inquire Now',
+    carry: (s) => 'Your enquiry so far: ' + s + '. Choosing this takes you back to it.',
+    carryEmpty: 'This takes you to the enquiry at the top of the page.',
+  },
+
+  footer: { meta: 'Zadar, Croatia · Adriatic Coast' },
+};
+
+/* ==========================================================================
+   MOCK DATA — realistic, not real.
+
+   The photographs themselves are NOT here. REQ-003 Q5 has not settled which
+   ones, at what size, or from where; the mockup's eight are ~4MB of inline
+   base64 that AC-8 fails on before anything else does. Each entry below keeps
+   the mockup's real alt text — that IS the photographer's brief — and renders
+   as a plate holding the real box.
+
+   Note the deliberately awkward values: entry 3 has a very long alt, entry 6
+   has none at all (a photograph nobody has described yet), and the toolbar can
+   set the count to 11, 5 or 0 to exercise the catalog's count rule.
+   ========================================================================== */
+const PHOTOS = [
+  { id: 'p1', tone: 'sea',   alt: 'Adriatic sea and Velebit mountains at dawn' },
+  { id: 'p2', tone: 'warm',  alt: 'Master bedroom with panoramic sea view' },
+  { id: 'p3', tone: 'stone', alt: 'Building exterior — modern architecture, seen from the coastal road below, with the terrace and its glass railing picked out against the hillside' },
+  { id: 'p4', tone: 'deep',  alt: 'Balcony terrace overlooking the Adriatic' },
+  { id: 'p5', tone: 'warm',  alt: 'Living room with comfortable sectional sofa' },
+  { id: 'p6', tone: 'stone', alt: '' },
+  { id: 'p7', tone: 'sea',   alt: 'Panoramic view of the Dalmatian coast' },
+  { id: 'p8', tone: 'deep',  alt: 'Window view — green Mediterranean hills' },
+  { id: 'p9',  tone: 'sea',   alt: 'Kitchen and dining table at the terrace doors' },
+  { id: 'p10', tone: 'warm',  alt: 'Bathroom with walk-in shower' },
+  { id: 'p11', tone: 'stone', alt: 'Olive terraces on the approach to the apartment' },
+];
+
+/* ==========================================================================
+   ICONS — the four in the canvas, and nothing else. components.md § Gaps #13:
+   this design has no icon system, so no fifth icon is invented here.
+   ========================================================================== */
+const ICONS = {
+  bed: <path d="M3 21V11h18v10M3 11V7a2 2 0 012-2h14a2 2 0 012 2v4M7 11V9a1 1 0 011-1h2a1 1 0 011 1v2m-4 0h4m2 0V9a1 1 0 011-1h2a1 1 0 011 1v2m-4 0h4M3 17h18" />,
+  guests: <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm14 10v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />,
+  view: <React.Fragment><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></React.Fragment>,
+  ac: <path d="M8 16a5 5 0 018 0M12 3v1m6.36 1.64l-.7.7M21 12h-1M4 12H3m1.64-6.36l.7.7M12 20v1m4-5a4 4 0 00-8 0" />,
+};
+const Icon = ({ name }) => <svg viewBox="0 0 24 24" aria-hidden="true">{ICONS[name]}</svg>;
+
+/* ==========================================================================
+   Photo — the stand-in plate. Holds the final box in every state so nothing
+   below it moves as images arrive (AC-8), and never renders as nothing (AC-7).
+   ========================================================================== */
+function Photo({ photo, state, showCaption = true }) {
+  const described = photo.alt && photo.alt.length > 0;
+  return (
+    <span className="photo" data-tone={photo.tone} data-state={state}
+          role="img" aria-label={described ? photo.alt : undefined} aria-hidden={described ? undefined : 'true'}>
+      {showCaption && state !== 'loading' && (
+        <span className="photo-caption">
+          {state === 'error'
+            ? COPY.gallery.failed + (described ? ' ' + photo.alt : '')
+            : (described ? photo.alt : '—')}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/* ==========================================================================
+   SCREEN — SCR-landing-shell
+   SiteNav (transparent → scrolled), MobileNav, the in-page destinations, and
+   the footer. AC-3, AC-4, AC-6, AC-10, AC-14, AC-16.
+   ========================================================================== */
+const SECTIONS = [
+  { id: 'gallery', key: 'gallery' },
+  { id: 'location', key: 'location' },
+  { id: 'reservations', key: 'contact' },
+];
+
+function SiteNav({ scrolled, current, onGoToEnquiry }) {
+  const [open, setOpen] = useState(false);
+  const toggleRef = useRef(null);
+  const sheetRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = 'hidden';
+    const first = sheetRef.current && sheetRef.current.querySelector('a, button');
+    if (first) first.focus();
+    const onKey = (e) => {
+      if (e.key === 'Escape') { setOpen(false); if (toggleRef.current) toggleRef.current.focus(); return; }
+      if (e.key !== 'Tab' || !sheetRef.current) return;
+      const items = [toggleRef.current, ...sheetRef.current.querySelectorAll('a, button')].filter(Boolean);
+      const i = items.indexOf(document.activeElement);
+      e.preventDefault();
+      const next = e.shiftKey ? (i <= 0 ? items.length - 1 : i - 1) : (i === items.length - 1 ? 0 : i + 1);
+      items[next].focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
+  }, [open]);
+
+  const close = () => setOpen(false);
+
+  const links = SECTIONS.map((s) => (
+    <a key={s.id} href={'#' + s.id} className="nav-link"
+       data-testid={'nav-link-' + s.id}
+       aria-current={current === s.id ? 'true' : undefined}>
+      {COPY.nav[s.key]}
+    </a>
+  ));
+
+  return (
+    <nav data-screen="SCR-landing-shell" data-req="REQ-003"
+         className={'site-nav on-image' + (scrolled || open ? ' is-scrolled' : '')}
+         aria-label={COPY.nav.label} data-testid="site-nav">
+      <div className="site-nav-row">
+        <a href="#top" className="nav-brand" data-testid="nav-brand">{COPY.brand}</a>
+
+        <div className="nav-links">
+          {links}
+          <a href="#enquiry" className="btn" data-variant="solid" data-size="sm"
+             data-testid="nav-book" onClick={onGoToEnquiry}>{COPY.nav.book}</a>
+        </div>
+
+        <button ref={toggleRef} type="button" className="nav-toggle"
+                aria-expanded={open} aria-controls="mobile-nav"
+                data-testid="mobile-nav-toggle"
+                onClick={() => setOpen((o) => !o)}>
+          {open ? COPY.nav.menuClose : COPY.nav.menuOpen}
+        </button>
+      </div>
+
+      {open && (
+        <div id="mobile-nav" ref={sheetRef} className="mobile-nav"
+             aria-label={COPY.nav.mobileLabel} data-testid="mobile-nav">
+          {SECTIONS.map((s) => (
+            <a key={s.id} href={'#' + s.id} className="nav-link"
+               data-testid={'mobile-nav-link-' + s.id}
+               aria-current={current === s.id ? 'true' : undefined}
+               onClick={close}>{COPY.nav[s.key]}</a>
+          ))}
+          <a href="#enquiry" className="btn" data-variant="solid" data-size="sm"
+             data-testid="mobile-nav-book"
+             onClick={(e) => { close(); onGoToEnquiry(e); }}>{COPY.nav.book}</a>
+        </div>
+      )}
+    </nav>
+  );
+}
+
+function SiteFooter() {
+  return (
+    <footer className="site-footer" data-testid="site-footer">
+      <div className="footer-brand">{COPY.brand}</div>
+      {COPY.footer.meta}
+    </footer>
+  );
+}
+
+/* ==========================================================================
+   SCREEN — SCR-hero.  AC-1, AC-4, AC-7, AC-8, AC-14.
+   ========================================================================== */
+function Hero({ imageState }) {
+  return (
+    <section id="top" data-screen="SCR-hero" data-req="REQ-003"
+             className="hero on-image" data-testid="hero">
+      {/* the ground is painted before the photograph arrives, so the white text is
+          legible from the first frame and a failed image never renders white on
+          white (AC-7, AC-8). The photograph keeps its own description (AC-14). */}
+      <div className="hero-plate">
+        {imageState === 'loaded' && <Photo photo={{ tone: 'deep', alt: COPY.hero.imageAlt }} state="loaded" showCaption={false} />}
+      </div>
+      <div className="hero-scrim" aria-hidden="true" />
+      <div className="hero-content">
+        <p className="hero-eyebrow">{COPY.hero.eyebrow}</p>
+        <h1 className="hero-title">{COPY.hero.titleLine1}<br />{COPY.hero.titleLine2}</h1>
+        <p className="hero-subtitle">{COPY.hero.subtitle}</p>
+        <a href="#gallery" className="btn" data-variant="outline-on-image" data-testid="hero-cta">
+          {COPY.hero.cta}
+        </a>
+        {imageState === 'error' && <p className="hero-note" data-testid="hero-image-error">{COPY.hero.imageFailed}</p>}
+      </div>
+    </section>
+  );
+}
+
+/* ==========================================================================
+   SCREEN — SCR-booking-enquiry
+   AC-1, AC-6, AC-11, AC-12, AC-13, AC-15, AC-17.
+
+   The bar starts an enquiry. It does not search availability, and its action
+   does not claim to (AC-17). Both dates validate as they are entered, not on
+   submit (AC-11).
+   ========================================================================== */
+const today = () => new Date().toISOString().slice(0, 10);
+
+function validate(checkIn, checkOut) {
+  const errors = {};
+  if (checkIn && checkIn < today()) errors.checkIn = COPY.booking.errors.past;
+  if (checkOut && !checkIn) errors.checkOut = COPY.booking.errors.needCheckIn;
+  else if (checkOut && checkIn && checkOut <= checkIn) errors.checkOut = COPY.booking.errors.order;
+  return errors;
+}
+
+function Callout({ tone, head, children, actions }) {
+  const ref = useRef(null);
+  useEffect(() => { if (ref.current) ref.current.focus(); }, [tone, head]);
+  return (
+    <div ref={ref} className="callout" data-tone={tone} data-testid="callout"
+         role="alert" tabIndex={-1}>
+      <p className="callout-head">
+        <span className="callout-glyph" aria-hidden="true">{tone === 'success' ? '✓' : '!'}</span>
+        {head}
+      </p>
+      <div className="callout-body">{children}</div>
+      {actions && <div className="callout-actions">{actions}</div>}
+    </div>
+  );
+}
+
+function BookingEnquiry({ enquiry, mechanism, forcedOutcome, checkInRef }) {
+  const {
+    checkIn, setCheckIn, checkOut, setCheckOut, guests, setGuests,
+    phase, setPhase, touched, setTouched,
+  } = enquiry;
+
+  const errors = validate(checkIn, checkOut);
+  const show = (k) => (touched[k] || phase === 'attempted') && errors[k];
+  const complete = checkIn && checkOut && Object.keys(errors).length === 0;
+  const busy = phase === 'submitting';
+
+  const stay = complete ? COPY.enquiry.stayDescription(checkIn, checkOut, guests) : null;
+
+  const onCheckIn = (v) => {
+    setCheckIn(v);
+    setTouched((t) => ({ ...t, checkIn: true }));
+    if (checkOut && v && checkOut <= v) setCheckOut('');   // never leave an impossible pair on screen
+    if (phase !== 'idle') setPhase('idle');
+  };
+  const onCheckOut = (v) => {
+    setCheckOut(v);
+    setTouched((t) => ({ ...t, checkOut: true }));
+    if (phase !== 'idle') setPhase('idle');
+  };
+  const onGuests = (n) => {
+    setGuests(Math.max(1, n));
+    if (phase !== 'idle') setPhase('idle');
+  };
+
+  const submit = (e) => {
+    e.preventDefault();
+    setTouched({ checkIn: true, checkOut: true });
+    if (!complete) { setPhase('attempted'); return; }
+    if (mechanism === 'mailto') { setPhase('handed'); return; }
+    setPhase('submitting');
+    window.setTimeout(() => setPhase(forcedOutcome === 'failed' ? 'failed' : 'sent'), 900);
+  };
+
+  return (
+    <section id="enquiry" data-screen="SCR-booking-enquiry" data-req="REQ-003" className="booking-wrap">
+      <h2 className="vh">{COPY.booking.heading}</h2>
+      <form className="booking-bar" onSubmit={submit} noValidate data-testid="booking-bar">
+
+        <div className="booking-field" data-disabled={busy}>
+          <label className="field-label" htmlFor="f-checkin">{COPY.booking.checkIn}</label>
+          <input id="f-checkin" ref={checkInRef} type="date" className="field-control"
+                 data-testid="booking-field-checkin"
+                 value={checkIn} disabled={busy}
+                 min={today()}
+                 aria-invalid={show('checkIn') ? 'true' : undefined}
+                 aria-describedby="e-checkin"
+                 onChange={(e) => onCheckIn(e.target.value)}
+                 onBlur={() => setTouched((t) => ({ ...t, checkIn: true }))} />
+          <p className="field-error" id="e-checkin" data-testid="field-error-checkin">
+            {show('checkIn') ? errors.checkIn : ''}
+          </p>
+        </div>
+
+        <div className="booking-field" data-disabled={busy}>
+          <label className="field-label" htmlFor="f-checkout">{COPY.booking.checkOut}</label>
+          <input id="f-checkout" type="date" className="field-control"
+                 data-testid="booking-field-checkout"
+                 value={checkOut} disabled={busy}
+                 min={checkIn || today()}
+                 aria-invalid={show('checkOut') ? 'true' : undefined}
+                 aria-describedby="e-checkout"
+                 onChange={(e) => onCheckOut(e.target.value)}
+                 onBlur={() => setTouched((t) => ({ ...t, checkOut: true }))} />
+          <p className="field-error" id="e-checkout" data-testid="field-error-checkout">
+            {show('checkOut') ? errors.checkOut : ''}
+          </p>
+        </div>
+
+        <div className="booking-field" data-disabled={busy}>
+          <label className="field-label" htmlFor="f-guests">{COPY.booking.guests}</label>
+          <div className="guest-row">
+            <button type="button" className="guest-step" data-testid="booking-guests-fewer"
+                    aria-label={COPY.booking.fewer} disabled={busy || guests <= 1}
+                    onClick={() => onGuests(guests - 1)}>−</button>
+            <input id="f-guests" type="number" inputMode="numeric" min="1"
+                   className="field-control guest-count" data-testid="booking-field-guests"
+                   value={guests} disabled={busy}
+                   onChange={(e) => onGuests(parseInt(e.target.value, 10) || 1)} />
+            <button type="button" className="guest-step" data-testid="booking-guests-more"
+                    aria-label={COPY.booking.more} disabled={busy}
+                    onClick={() => onGuests(guests + 1)}>+</button>
+          </div>
+          <p className="field-error" data-testid="field-error-guests">
+            {/* GuestField has no maximum: REQ-003 Q6 has not confirmed the property's capacity */}
+          </p>
+        </div>
+
+        <button type="submit" className="btn booking-submit" data-variant="solid" data-size="md"
+                data-testid="booking-submit" disabled={busy} data-busy={busy ? 'true' : undefined}
+                aria-busy={busy ? 'true' : undefined}>
+          {busy ? COPY.booking.submitting : COPY.booking.submit}
+        </button>
+      </form>
+
+      {phase === 'attempted' && !complete && (
+        <Callout tone="error" head={COPY.enquiry.incompleteHead}>
+          {COPY.booking.errors.missing}
+        </Callout>
+      )}
+
+      {phase === 'sent' && (
+        <Callout tone="success" head={COPY.enquiry.sentHead}>
+          {COPY.enquiry.sentBody(stay)}
+        </Callout>
+      )}
+
+      {phase === 'handed' && (
+        <Callout tone="success" head={COPY.enquiry.handedHead}>
+          {COPY.enquiry.handedBody(stay)}
+          <div>{COPY.enquiry.handedFallback}</div>
+          <div className="callout-quote" data-testid="enquiry-draft">
+            {'To: ' + COPY.contact.emailPlaceholder + '  (' + COPY.contact.emailUnresolved + ')\n'
+              + 'Subject: ' + COPY.enquiry.mailSubject(checkIn, checkOut) + '\n\n'
+              + COPY.enquiry.mailBody(checkIn, checkOut, guests)}
+          </div>
+        </Callout>
+      )}
+
+      {phase === 'failed' && (
+        <Callout tone="error" head={COPY.enquiry.failedHead}
+                 actions={
+                   <button type="button" className="btn" data-variant="solid" data-size="sm"
+                           data-testid="callout-retry" onClick={submit}>{COPY.enquiry.retry}</button>
+                 }>
+          {COPY.enquiry.failedBody}
+          <div>{COPY.contact.otherChannelUnresolved}</div>
+        </Callout>
+      )}
+    </section>
+  );
+}
+
+/* ==========================================================================
+   SCREEN — SCR-photo-strip.  AC-1, AC-5, AC-7, AC-8.
+   ========================================================================== */
+function PhotoStrip({ photos, imageState, onOpen }) {
+  const four = photos.slice(0, 4);
+  return (
+    <section data-screen="SCR-photo-strip" data-req="REQ-003" className="photo-strip" data-testid="photo-strip">
+      <h2 className="vh">{COPY.strip.heading}</h2>
+      {four.map((p, i) => (
+        <button key={p.id} type="button" className="photo-tile"
+                data-testid={'photo-strip-tile-' + i}
+                disabled={imageState === 'error'}
+                aria-label={COPY.gallery.open(p.alt || COPY.gallery.heading)}
+                onClick={(e) => onOpen(i, e.currentTarget)}>
+          <Photo photo={p} state={imageState} />
+        </button>
+      ))}
+    </section>
+  );
+}
+
+/* ==========================================================================
+   SCREEN — SCR-welcome.  AC-1, AC-9, AC-14.
+   ========================================================================== */
+function Welcome() {
+  return (
+    <section data-screen="SCR-welcome" data-req="REQ-003" data-testid="welcome">
+      <div className="welcome">
+        <p className="section-eyebrow">{COPY.welcome.eyebrow}</p>
+        <h2 className="welcome-heading">{COPY.welcome.heading}</h2>
+        <div className="rule" aria-hidden="true" />
+        <p className="welcome-text">{COPY.welcome.text}</p>
+      </div>
+      <div className="features" data-testid="features">
+        {COPY.features.map((f) => (
+          <div className="feature" key={f.label}>
+            <div className="feature-icon"><Icon name={f.icon} /></div>
+            <div className="feature-value">{f.value}</div>
+            <div className="feature-label">{f.label}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ==========================================================================
+   SCREEN — SCR-gallery.  AC-1, AC-5, AC-7, AC-8, AC-9.
+   The count rule from components.md § Gallery, not the canvas's nth-child.
+   ========================================================================== */
+const BLOCK = ['tall', 'small', 'small', 'small', 'small', 'wide', 'wide', 'wide'];
+
+function shapesFor(n) {
+  if (n <= 0) return [];
+  if (n < 8) return ['tall', ...Array(n - 1).fill('small')];
+  return Array.from({ length: n }, (_, i) => BLOCK[i % 8]);
+}
+/* a trailing row of wide tiles divides the full width between however many it has */
+function fillsFor(shapes) {
+  const lastBlockStart = Math.floor((shapes.length - 1) / 8) * 8;
+  const trailingWides = shapes.slice(lastBlockStart).filter((s) => s === 'wide').length;
+  return shapes.map((s, i) =>
+    s === 'wide' && i >= lastBlockStart && trailingWides > 0 && trailingWides < 3 ? String(trailingWides) : undefined);
+}
+
+function Gallery({ photos, imageState, onOpen }) {
+  const shapes = shapesFor(photos.length);
+  const fills = fillsFor(shapes);
+  if (photos.length === 0) return null;   // a gallery heading over nothing is worse than no gallery
+  return (
+    <section id="gallery" data-screen="SCR-gallery" data-req="REQ-003"
+             className="gallery-section" data-testid="gallery">
+      <div className="gallery-header">
+        <p className="section-eyebrow">{COPY.gallery.eyebrow}</p>
+        <h2 className="gallery-heading">{COPY.gallery.heading}</h2>
+      </div>
+      <div className="gallery-grid">
+        {photos.map((p, i) => (
+          <button key={p.id} type="button" className="gallery-item"
+                  data-shape={shapes[i]} data-fill={fills[i]}
+                  data-testid={'gallery-tile-' + i}
+                  disabled={imageState === 'error'}
+                  aria-label={COPY.gallery.open(p.alt || COPY.gallery.heading)}
+                  onClick={(e) => onOpen(i, e.currentTarget)}>
+            <Photo photo={p} state={imageState} />
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ==========================================================================
+   SCREEN — SCR-lightbox.  AC-5, AC-6, AC-7, AC-13.
+   role=dialog, aria-modal, focus trapped, focus returned to the tile that
+   opened it, Escape closes, arrows step, index wraps, body scroll locked.
+   ========================================================================== */
+function Lightbox({ photos, index, imageState, onClose, onPrev, onNext }) {
+  const open = index !== null;
+  const ref = useRef(null);
+  const closeRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = 'hidden';
+    if (closeRef.current) closeRef.current.focus();
+    const onKey = (e) => {
+      if (e.key === 'Escape') { onClose(); return; }
+      if (e.key === 'ArrowLeft') { onPrev(); return; }
+      if (e.key === 'ArrowRight') { onNext(); return; }
+      if (e.key !== 'Tab' || !ref.current) return;
+      const items = [...ref.current.querySelectorAll('button')];
+      const i = items.indexOf(document.activeElement);
+      e.preventDefault();
+      const next = e.shiftKey ? (i <= 0 ? items.length - 1 : i - 1) : (i === items.length - 1 ? 0 : i + 1);
+      items[next].focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
+  }, [open, onClose, onPrev, onNext]);
+
+  const photo = open ? photos[index] : null;
+
+  return (
+    <div ref={ref} data-screen="SCR-lightbox" data-req="REQ-003"
+         className="lightbox" data-open={open ? 'true' : 'false'} data-testid="lightbox"
+         role="dialog" aria-modal="true" aria-label={COPY.lightbox.label}
+         aria-hidden={open ? undefined : 'true'}
+         onClick={onClose}>
+      {open && (
+        <React.Fragment>
+          <div className="lightbox-stage" onClick={(e) => e.stopPropagation()}>
+            <Photo photo={imageState === 'error' ? { ...photo, alt: COPY.lightbox.failed } : photo} state={imageState} />
+          </div>
+          <button ref={closeRef} type="button" className="lightbox-close"
+                  data-testid="lightbox-close" aria-label={COPY.lightbox.close}
+                  onClick={(e) => { e.stopPropagation(); onClose(); }}>×</button>
+          <button type="button" className="lightbox-nav lightbox-prev"
+                  data-testid="lightbox-prev" aria-label={COPY.lightbox.prev}
+                  onClick={(e) => { e.stopPropagation(); onPrev(); }}>‹</button>
+          <button type="button" className="lightbox-nav lightbox-next"
+                  data-testid="lightbox-next" aria-label={COPY.lightbox.next}
+                  onClick={(e) => { e.stopPropagation(); onNext(); }}>›</button>
+          <span className="lightbox-counter" data-testid="lightbox-counter" aria-live="polite">
+            {COPY.lightbox.counter(index + 1, photos.length)}
+          </span>
+        </React.Fragment>
+      )}
+    </div>
+  );
+}
+
+/* ==========================================================================
+   SCREEN — SCR-location.  AC-1, AC-4, AC-7.
+   ========================================================================== */
+function Location({ imageState }) {
+  return (
+    <section id="location" data-screen="SCR-location" data-req="REQ-003"
+             className="location-section" data-testid="location">
+      <div className="location-image">
+        <Photo photo={{ tone: 'stone', alt: COPY.location.imageAlt }} state={imageState} />
+      </div>
+      <div className="location-content on-primary">
+        <p className="section-eyebrow">{COPY.location.eyebrow}</p>
+        <h2 className="location-heading">{COPY.location.heading}</h2>
+        <div className="rule" aria-hidden="true" />
+        <p className="location-text">{COPY.location.text}</p>
+        <div className="location-actions">
+          {/* No address exists yet (REQ-003 Q4), so this points at the enquiry rather
+              than at an invented map link — AC-4 requires a destination that exists. */}
+          <a href="#enquiry" className="btn" data-variant="outline-on-primary"
+             data-testid="location-directions" title={COPY.location.ctaUnresolved}>
+            {COPY.location.cta}
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ==========================================================================
+   SCREEN — SCR-reservations.  AC-1, AC-4, AC-12.
+   The second entry point into the SAME enquiry. There is one enquiry on this
+   page, not two — this returns the visitor to it and focuses the first field,
+   carrying whatever they already entered.
+   ========================================================================== */
+function Reservations({ enquiry, onGoToEnquiry }) {
+  const { checkIn, checkOut, guests } = enquiry;
+  const has = checkIn && checkOut;
+  return (
+    <section id="reservations" data-screen="SCR-reservations" data-req="REQ-003"
+             className="cta-section" data-testid="reservations">
+      <p className="section-eyebrow">{COPY.reservations.eyebrow}</p>
+      <h2 className="cta-heading">{COPY.reservations.heading}</h2>
+      <p className="cta-sub">{COPY.reservations.sub}</p>
+      <a href="#enquiry" className="btn" data-variant="solid" data-size="md"
+         data-testid="reservations-cta" onClick={onGoToEnquiry}>{COPY.reservations.cta}</a>
+      <p className="cta-carry" data-testid="reservations-carry">
+        {has ? COPY.reservations.carry(COPY.enquiry.stayDescription(checkIn, checkOut, guests))
+             : COPY.reservations.carryEmpty}
+      </p>
+    </section>
+  );
+}
+
+/* ==========================================================================
+   DEV TOOLBAR — prototype scaffolding, not design. None of its copy goes
+   through COPY, deliberately: it never ships.
+   ========================================================================== */
+function Toolbar({ state, set }) {
+  const [open, setOpen] = useState(true);
+  const group = (label, key, options) => (
+    <div className="proto-row">
+      <span className="proto-label">{label}</span>
+      {options.map((o) => (
+        <button key={String(o.value)} type="button" className="proto-btn"
+                data-on={state[key] === o.value ? 'true' : 'false'}
+                onClick={() => set(key, o.value)}>{o.label}</button>
+      ))}
+    </div>
+  );
+  if (!open) {
+    return (
+      <div className="proto-bar">
+        <div className="proto-row">
+          <button type="button" className="proto-btn" onClick={() => setOpen(true)}>▲ PROTOTYPE · REQ-003</button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="proto-bar">
+      <div className="proto-row">
+        <span className="proto-label">PROTOTYPE · REQ-003</span>
+        <span className="proto-note">seaside-zadar-landing — states below are prototype controls, not page features.</span>
+        <button type="button" className="proto-btn" style={{ marginLeft: 'auto' }} onClick={() => setOpen(false)}>▼ hide</button>
+      </div>
+      {group('photographs', 'imageState', [
+        { value: 'loaded', label: 'populated' },
+        { value: 'loading', label: 'loading' },
+        { value: 'error', label: 'error' },
+      ])}
+      {group('gallery count', 'photoCount', [
+        { value: 8, label: '8 (the canvas)' },
+        { value: 11, label: '11' },
+        { value: 5, label: '5' },
+        { value: 0, label: '0 (empty)' },
+      ])}
+      {group('enquiry goes to', 'mechanism', [
+        { value: 'mailto', label: 'mail client (mailto)' },
+        { value: 'endpoint', label: 'the API (REQ-001)' },
+      ])}
+      {group('and then', 'forcedOutcome', [
+        { value: 'sent', label: 'succeeds' },
+        { value: 'failed', label: 'fails' },
+      ])}
+      <div className="proto-row">
+        <span className="proto-label">jump</span>
+        <a className="proto-btn" href="#top">hero</a>
+        <a className="proto-btn" href="#enquiry">enquiry</a>
+        <a className="proto-btn" href="#gallery">gallery</a>
+        <a className="proto-btn" href="#location">location</a>
+        <a className="proto-btn" href="#reservations">reservations</a>
+        <span className="proto-note">Open: REQ-003 Q4 (where an enquiry goes, and the real address) and Q5 (the photographs).</span>
+      </div>
+    </div>
+  );
+}
+
+/* ==========================================================================
+   APP
+   ========================================================================== */
+function App() {
+  const [imageState, setImageState] = useState('loaded');
+  const [photoCount, setPhotoCount] = useState(8);
+  const [mechanism, setMechanism] = useState('mailto');
+  const [forcedOutcome, setForcedOutcome] = useState('sent');
+  const [scrolled, setScrolled] = useState(false);
+  const [current, setCurrent] = useState(null);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+
+  const [checkIn, setCheckIn] = useState('');
+  const [checkOut, setCheckOut] = useState('');
+  const [guests, setGuests] = useState(2);
+  const [phase, setPhase] = useState('idle');
+  const [touched, setTouched] = useState({});
+
+  const checkInRef = useRef(null);
+  const openerRef = useRef(null);
+
+  const photos = useMemo(() => PHOTOS.slice(0, photoCount), [photoCount]);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 60);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    const targets = SECTIONS.map((s) => document.getElementById(s.id)).filter(Boolean);
+    if (!targets.length || !window.IntersectionObserver) return;
+    const io = new IntersectionObserver((entries) => {
+      const visible = entries.filter((e) => e.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible) setCurrent(visible.target.id);
+    }, { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.25, 0.5] });
+    targets.forEach((t) => io.observe(t));
+    return () => io.disconnect();
+  }, [photoCount]);
+
+  const openLightbox = useCallback((i, opener) => {
+    openerRef.current = opener;
+    setLightboxIndex(i);
+  }, []);
+  const closeLightbox = useCallback(() => {
+    setLightboxIndex(null);
+    if (openerRef.current) openerRef.current.focus();   // focus returns to the tile that opened it
+  }, []);
+  const prevPhoto = useCallback(() => setLightboxIndex((i) => (i > 0 ? i - 1 : photos.length - 1)), [photos.length]);
+  const nextPhoto = useCallback(() => setLightboxIndex((i) => (i < photos.length - 1 ? i + 1 : 0)), [photos.length]);
+
+  const goToEnquiry = useCallback((e) => {
+    if (e) e.preventDefault();
+    const el = document.getElementById('enquiry');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => { if (checkInRef.current) checkInRef.current.focus({ preventScroll: true }); }, 400);
+  }, []);
+
+  const enquiry = {
+    checkIn, setCheckIn, checkOut, setCheckOut, guests, setGuests,
+    phase, setPhase, touched, setTouched,
+  };
+
+  const toolbarState = { imageState, photoCount, mechanism, forcedOutcome };
+  const setToolbar = (k, v) => ({
+    imageState: setImageState, photoCount: setPhotoCount,
+    mechanism: setMechanism, forcedOutcome: setForcedOutcome,
+  })[k](v);
+
+  return (
+    <React.Fragment>
+      <SiteNav scrolled={scrolled} current={current} onGoToEnquiry={goToEnquiry} />
+      <main>
+        <Hero imageState={imageState} />
+        <BookingEnquiry enquiry={enquiry} mechanism={mechanism}
+                        forcedOutcome={forcedOutcome} checkInRef={checkInRef} />
+        <PhotoStrip photos={photos} imageState={imageState} onOpen={openLightbox} />
+        <Welcome />
+        <Gallery photos={photos} imageState={imageState} onOpen={openLightbox} />
+        <Location imageState={imageState} />
+        <Reservations enquiry={enquiry} onGoToEnquiry={goToEnquiry} />
+      </main>
+      <SiteFooter />
+      <Lightbox photos={photos} index={lightboxIndex} imageState={imageState}
+                onClose={closeLightbox} onPrev={prevPhoto} onNext={nextPhoto} />
+      <div className="proto-spacer" />
+      <Toolbar state={toolbarState} set={setToolbar} />
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "$comment": "Codex equivalent of .claude/settings.json -> hooks. Same two shell scripts: they read the file path from either a file_path or a path key, so one copy serves both harnesses. Codex requires explicit trust for non-managed hooks — run /hooks once to approve them.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "handlers": [
+          { "type": "command", "command": ".claude/hooks/require-plan.sh" },
+          { "type": "command", "command": ".claude/hooks/check-hardcoded-colors.sh", "async": true }
+        ]
+      }
+    ]
+  }
+}

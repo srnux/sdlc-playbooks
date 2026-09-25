@@ -1,0 +1,8 @@
+node_modules/
+.claude/settings.local.json
+
+# local delivery helpers — not part of the procedure
+bootstrap.ps1
+bootstrap.sh
+publish.ps1
+publish.sh

@@ -1,0 +1,113 @@
+{
+  "$comment": "The ONLY per-project file. Everything else is the reusable procedure. Retarget = copy .claude/ + playbooks/, edit this file.",
+  "product": {
+    "name": "CHANGE-ME",
+    "description": "Holiday-rental site for a seaside apartment near Zadar, Croatia.",
+    "repo": ".",
+    "mainBranch": "main",
+    "branchPattern": "story/{id}-{slug}"
+  },
+  "playbooks": {
+    "$comment": "playbooks/ is the source of truth. tools/sync.mjs projects it into each harness's skills dir as generated copies. Add a target and the same procedure reaches another tool; nothing in the playbooks changes.",
+    "source": "playbooks",
+    "targets": [
+      ".claude/skills",
+      ".agents/skills"
+    ]
+  },
+  "designSystem": {
+    "tokens": "design-system/tokens.css",
+    "catalog": "design-system/components.md",
+    "source": {
+      "kind": "claude-design",
+      "$comment": "kind: claude-design | library | manual. For claude-design, put the artifact URL or exported file here; for library, the import path of the component library.",
+      "ref": "docs/seaside-zadar-v3.html"
+    },
+    "tokenPrefix": "--ds-"
+  },
+  "requirements": {
+    "dir": "work/items",
+    "idPrefix": "REQ"
+  },
+  "prototype": {
+    "dir": "prototype",
+    "approvedDir": "prototype/.approved",
+    "filePattern": "{slug}.html",
+    "recipe": "react-umd-single-file",
+    "$comment": "One self-contained .html per requirement: React 18 UMD + Babel standalone, design-system tokens inlined, hash routing, every screen marked data-screen.",
+    "serveCmd": "npx --yes serve -l 4173 prototype"
+  },
+  "tracker": {
+    "provider": "files",
+    "$comment": "provider: files | jira. No playbook ever talks to a tracker directly — they shell out to tools/tracker.mjs, so swapping the provider changes nothing above this line.",
+    "files": {
+      "dir": "work/items"
+    },
+    "jira": {
+      "$comment": "Fill in and set provider=jira. transport: mcp (an Atlassian MCP server) or cli (curl + JIRA_EMAIL/JIRA_API_TOKEN env).",
+      "transport": "mcp",
+      "baseUrl": "",
+      "projectKey": "",
+      "issueType": {
+        "requirement": "Story",
+        "story": "Task"
+      },
+      "statusMap": {
+        "draft": "To Do",
+        "specified": "To Do",
+        "prototyped": "In Review",
+        "approved": "Ready",
+        "delivered": "Done",
+        "ready": "To Do",
+        "in-progress": "In Progress",
+        "in-review": "In Review",
+        "done": "Done",
+        "blocked": "Blocked"
+      },
+      "fieldMap": {
+        "parent": "parent",
+        "screen": "customfield_screen",
+        "prototypeVersion": "customfield_protoversion"
+      }
+    }
+  },
+  "statuses": {
+    "requirement": [
+      "draft",
+      "specified",
+      "prototyped",
+      "approved",
+      "delivered"
+    ],
+    "story": [
+      "ready",
+      "in-progress",
+      "in-review",
+      "done",
+      "blocked"
+    ]
+  },
+  "artifacts": {
+    "plansDir": "work/plans",
+    "docsDir": "docs",
+    "gates": {
+      "planBeforeCode": true,
+      "tokensOnly": true,
+      "prototypeApprovedBeforeStories": true,
+      "coverageBeforeDone": true,
+      "humanApprovesPrototype": true,
+      "$comment": "humanApprovesPrototype is enforced by gate.mjs approve, which refuses without --human-approved. It is the one gate that represents a person and the one that prose could never hold."
+    }
+  },
+  "loops": {
+    "reviewRounds": 2,
+    "$comment": "After this many bounced reviews the story goes to blocked and asks the human. gate.mjs review counts the rounds and refuses the next one."
+  },
+  "verify": {
+    "$comment": "Commands the implement phase must get green before a story leaves in-progress. Empty array = nothing to run (the procedure still works, it just proves less).",
+    "commands": [
+      "npm run lint",
+      "npm test"
+    ]
+  }
+}

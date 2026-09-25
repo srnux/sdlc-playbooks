@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PROTOTYPE — REQ-### · {{title}}</title>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+/* ============================================================================
+   TOKENS — pasted verbatim from design-system/tokens.css.
+   Do not edit here. A value you need that isn't below is a design-owner
+   decision: go to /design-system, don't add it inline.
+   ========================================================================= */
+:root {
+  --ds-color-bg: #ffffff;
+  --ds-color-surface: #f7f7f8;
+  --ds-color-text: #16161a;
+  --ds-color-text-muted: #6b6b76;
+  --ds-color-border: #e3e3e8;
+  --ds-color-primary: #701ef6;
+  --ds-color-primary-contrast: #ffffff;
+  --ds-color-danger: #d92d20;
+  --ds-color-success: #067647;
+  --ds-color-warning: #b54708;
+
+  --ds-font-sans: Inter, system-ui, -apple-system, sans-serif;
+  --ds-text-xs: 12px; --ds-text-sm: 13px; --ds-text-md: 14px;
+  --ds-text-lg: 16px; --ds-text-xl: 20px; --ds-text-2xl: 28px;
+  --ds-leading-tight: 1.25; --ds-leading-normal: 1.5;
+
+  --ds-space-1: 4px; --ds-space-2: 8px; --ds-space-3: 12px;
+  --ds-space-4: 16px; --ds-space-6: 24px; --ds-space-8: 32px;
+
+  --ds-radius-sm: 4px; --ds-radius-md: 8px; --ds-radius-lg: 12px; --ds-radius-full: 999px;
+  --ds-shadow-sm: 0 1px 2px rgba(16,16,26,.06);
+  --ds-shadow-md: 0 4px 12px rgba(16,16,26,.10);
+}
+
+/* ---- element styles: tokens only, never a literal ---- */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-text-md);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-color-text);
+  background: var(--ds-color-bg);
+}
+.ds-card {
+  background: var(--ds-color-bg);
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-sm);
+  padding: var(--ds-space-4);
+}
+.ds-btn {
+  font: inherit;
+  padding: var(--ds-space-2) var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  border: 1px solid var(--ds-color-border);
+  background: var(--ds-color-bg);
+  color: var(--ds-color-text);
+  cursor: pointer;
+}
+.ds-btn[data-variant="primary"] {
+  background: var(--ds-color-primary);
+  border-color: var(--ds-color-primary);
+  color: var(--ds-color-primary-contrast);
+}
+.ds-btn[disabled] { opacity: .5; cursor: not-allowed; }
+.ds-muted { color: var(--ds-color-text-muted); }
+
+/* ---- the dev toolbar: prototype-only, never part of the design ---- */
+.proto-bar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; flex-wrap: wrap; gap: var(--ds-space-2); align-items: center;
+  padding: var(--ds-space-2) var(--ds-space-4);
+  background: var(--ds-color-surface);
+  border-bottom: 1px solid var(--ds-color-border);
+  font-size: var(--ds-text-xs);
+}
+.proto-bar strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect } = React;
+
+/* ==========================================================================
+   MOCK DATA — realistic, not real. Include at least one very long value and
+   one blank value, and enough rows that the layout has to cope.
+   ========================================================================== */
+const CONTACTS = [
+  { id: 1, name: 'Marieke van der Bergh-Timmermans', email: 'marieke@example.com', status: 'active' },
+  { id: 2, name: 'Tom Bauer',    email: '',                     status: 'active' },
+  { id: 3, name: 'Sofia Ricci',  email: 'sofia.ricci@example.com', status: 'lead' },
+  // … enough rows to force scrolling and paging
+];
+
+/* ==========================================================================
+   SCREENS
+   Every screen root carries data-screen + data-req. check-coverage.mjs reads
+   exactly this; a screen without it does not exist as far as the flow goes.
+   Every screen handles: empty | loading | error | populated | success.
+   ========================================================================== */
+
+function ContactList({ state }) {
+  return (
+    <section data-screen="SCR-contact-list" data-req="REQ-###" style={{ padding: 'var(--ds-space-6)' }}>
+      <h1 style={{ fontSize: 'var(--ds-text-2xl)', margin: 0 }}>Contacts</h1>
+
+      {state === 'loading' && (
+        <div className="ds-card" style={{ marginTop: 'var(--ds-space-4)' }}>
+          {[0, 1, 2].map(i => (
+            <div key={i} style={{
+              height: 'var(--ds-space-6)', marginBottom: 'var(--ds-space-2)',
+              background: 'var(--ds-color-surface)', borderRadius: 'var(--ds-radius-sm)'
+            }} />
+          ))}
+        </div>
+      )}
+
+      {state === 'empty' && (
+        <div className="ds-card" style={{ marginTop: 'var(--ds-space-4)', textAlign: 'center' }}>
+          <p className="ds-muted">No contacts yet.</p>
+          <button className="ds-btn" data-variant="primary" data-testid="add-contact">Add a contact</button>
+        </div>
+      )}
+
+      {state === 'error' && (
+        <div className="ds-card" style={{ marginTop: 'var(--ds-space-4)', borderColor: 'var(--ds-color-danger)' }}>
+          <p style={{ color: 'var(--ds-color-danger)', margin: 0 }}>Couldn’t load contacts.</p>
+          <button className="ds-btn" data-testid="retry" style={{ marginTop: 'var(--ds-space-3)' }}>Retry</button>
+        </div>
+      )}
+
+      {state === 'success' && (
+        <div className="ds-card" style={{
+          marginTop: 'var(--ds-space-4)', borderColor: 'var(--ds-color-success)'
+        }}>
+          <p style={{ color: 'var(--ds-color-success)', margin: 0 }}>
+            2 contacts archived. <a href="#/contacts">Undo</a>
+          </p>
+        </div>
+      )}
+
+      {(state === 'populated' || state === 'success') && (
+        <table className="ds-card" style={{ marginTop: 'var(--ds-space-4)', width: '100%', borderCollapse: 'collapse' }}>
+          <tbody>
+            {CONTACTS.map(c => (
+              <tr key={c.id} style={{ borderBottom: '1px solid var(--ds-color-border)' }}>
+                <td style={{ padding: 'var(--ds-space-3)' }}>{c.name}</td>
+                <td style={{ padding: 'var(--ds-space-3)' }} className="ds-muted">{c.email || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
+/* Add one component per screen, same shape. */
+
+/* ==========================================================================
+   SHELL — hash routing + the state switcher. Prototype scaffolding only;
+   none of this is part of the design under review.
+   ========================================================================== */
+const ROUTES = {
+  '#/contacts': { label: 'Contact list', Screen: ContactList },
+  // '#/contacts/archive': { label: 'Archive confirm', Screen: ArchiveConfirm },
+};
+const STATES = ['populated', 'empty', 'loading', 'error', 'success'];
+
+function App() {
+  const [hash, setHash] = useState(window.location.hash || '#/contacts');
+  const [state, setState] = useState('populated');
+  useEffect(() => {
+    const on = () => setHash(window.location.hash || '#/contacts');
+    window.addEventListener('hashchange', on);
+    return () => window.removeEventListener('hashchange', on);
+  }, []);
+  const route = ROUTES[hash] ?? ROUTES['#/contacts'];
+  const { Screen } = route;
+  return (
+    <>
+      <div className="proto-bar">
+        <strong>PROTOTYPE · REQ-###</strong>
+        {Object.entries(ROUTES).map(([h, r]) => (
+          <a key={h} href={h} style={{ color: h === hash ? 'var(--ds-color-primary)' : 'inherit' }}>{r.label}</a>
+        ))}
+        <span style={{ marginLeft: 'auto' }}>state:</span>
+        {STATES.map(s => (
+          <button key={s} className="ds-btn" data-variant={s === state ? 'primary' : undefined}
+                  onClick={() => setState(s)}>{s}</button>
+        ))}
+      </div>
+      <Screen state={state} />
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

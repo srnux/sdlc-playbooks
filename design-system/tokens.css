@@ -1,0 +1,346 @@
+/* =============================================================================
+   Vinjerac — Seaside Zadar. LOCKED design system.
+
+   Derived strictly from  docs/seaside-zadar-v3.html
+   (the `designSystem.source.ref` in .claude/sdlc.config.json).
+
+   Every value below appears in that canvas — EXCEPT the block marked
+   "DECIDED, NOT DERIVED", which is the only part of this file that does not.
+   Nothing here was invented to round out a scale. Where the canvas has one
+   grey, this file has one grey.
+
+   Adding, changing or removing a token is a design decision that touches every
+   screen ever built from it. It happens at /design-system and nowhere else.
+
+   2026-09-13 — refresh + extension. Re-derived from the canvas: every colour
+   literal and every design-carrying value in it was already tokenised, so
+   NOTHING MOVED. Then extended, deliberately, to unblock REQ-003: the canvas is
+   a marketing page whose booking bar is static text, and REQ-003 turns it into a
+   real enquiry form. State colour, a focus ring and a disabled treatment were
+   decided with the PO and are marked as such below.
+
+   Remaining gaps — see design-system/components.md § Gaps. There is still no
+   warning colour, because nothing yet needs one. The next thing that does comes
+   back here, and does not improvise.
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   FONT LOADING — the authoritative list. Copy this, not the canvas's.
+
+   The canvas imports EIGHT faces and uses THREE: all four weights of Cormorant
+   Garamond, which no rule in it ever references, plus a Playfair italic that
+   nothing sets. Only the three below are used — 600 for every heading and the
+   brand, 700 for the hero title, 400 for the booking field value. The body
+   family is a system stack and downloads nothing.
+
+   @import is render-blocking and serialises this request behind the stylesheet.
+   It is correct here so that this file stands alone when inlined into a
+   prototype. In the product, load the same three faces from the document head
+   with a preconnect, or through the framework's font layer — REQ-003 AC-8 is
+   about exactly this.
+   ----------------------------------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap');
+
+:root {
+
+  /* ---------------------------------------------------------------------------
+     COLOUR — surfaces
+     The canvas declares --bg and --surface as the same white. The genuine
+     second surface is the tinted band behind the gallery.
+     --------------------------------------------------------------------------- */
+  --ds-color-bg:               #ffffff;
+  --ds-color-surface:          #ffffff;
+  --ds-color-surface-alt:      #f8f9fa;   /* gallery band */
+
+  /* COLOUR — text on light surfaces */
+  --ds-color-text:             #1a1a2e;   /* 17.06:1 on bg — AA */
+  --ds-color-text-muted:       #6b7280;   /* 4.83:1 on bg — AA */
+
+  /* COLOUR — lines */
+  --ds-color-border:           #e5e7eb;
+
+  /* ---------------------------------------------------------------------------
+     COLOUR — primary (the Adriatic navy)
+     This is the action colour: Book Now, Search, Inquire Now, and the inverted
+     location panel. It is the only colour that means "press this".
+     --------------------------------------------------------------------------- */
+  --ds-color-primary:          #2c3e6b;   /* white on it: 10.46:1 — AA */
+  --ds-color-primary-hover:    #3b5998;   /* white on it:  6.84:1 — AA */
+  --ds-color-primary-contrast: #ffffff;
+
+  /* ---------------------------------------------------------------------------
+     COLOUR — accent (the gold)
+     DECORATIVE ONLY. In the canvas it appears on section eyebrows, the short
+     rules under headings, and the feature icons. It is never a button and never
+     a link.
+     ACCESSIBILITY: 2.24:1 on --ds-color-bg — FAILS WCAG AA, and the canvas uses
+     it at 12px. It passes only on --ds-color-primary (4.67:1). See § Gaps.
+     --------------------------------------------------------------------------- */
+  --ds-color-accent:           #c9a96e;
+
+  /* =============================================================================
+     DECIDED, NOT DERIVED — 2026-09-13
+     Everything in this block was chosen with the PO at /design-system. None of it
+     appears in the canvas, because the canvas is a marketing page with no form,
+     no failure and no keyboard affordance. Each value carries the contrast ratio
+     it was chosen for, measured against --ds-color-bg (#ffffff).
+     ============================================================================= */
+
+  /* COLOUR — state
+     The canvas has neither a red nor a green. These are the two that were added,
+     and they are the only two: there is still no warning colour because nothing
+     yet needs one. Both ratios hold in either direction — coloured text on white,
+     and white text on a filled block of the colour. */
+  --ds-color-danger:           #b3261e;   /* 6.54:1 — invalid field, failed enquiry */
+  --ds-color-danger-contrast:  #ffffff;
+  --ds-color-success:          #2d6a4f;   /* 6.39:1 — enquiry sent */
+  --ds-color-success-contrast: #ffffff;
+
+  /* COLOUR — the second gold
+     No single gold works. --ds-color-accent (#c9a96e) passes on the navy panel
+     (4.67:1) and fails badly on white (2.24:1); this one passes on white and
+     fails on navy (2.16:1). So they are not interchangeable and neither replaces
+     the other:
+       --ds-color-accent       decoration + anything on navy (rules, icons, the
+                               location panel eyebrow). Graphical, needs 3:1.
+       --ds-color-accent-text  eyebrow TEXT on a light surface. */
+  --ds-color-accent-text:      #8a6d3b;   /* 4.85:1 */
+
+  /* COLOUR — focus
+     The canvas has no focus state anywhere, which made its lightbox a keyboard
+     trap. Navy on light surfaces, white over photography — the ring has to be
+     visible on both, and no one colour is. */
+  --ds-color-focus:            #2c3e6b;   /* 10.46:1 on bg — same value as primary,
+                                             named separately so a theme can move it */
+  --ds-color-focus-on-image:   #ffffff;   /* 10.46:1 on primary */
+  --ds-focus-ring-width:       2px;       /* matches --ds-border-width-thick */
+  --ds-focus-ring-offset:      2px;
+
+  /* STATE — disabled
+     Expressed as opacity rather than a new grey, so a disabled control stays
+     recognisably itself and no fourth grey enters the palette. */
+  --ds-opacity-disabled:       0.45;
+
+  /* SHAPE — form controls
+     One height for every field, so a row of them aligns. 48px is already the
+     rhythm this design uses (--ds-rule-width, the feature icon). */
+  --ds-field-height:           48px;
+
+  /* =========================== end DECIDED block ============================ */
+
+  /* ---------------------------------------------------------------------------
+     COLOUR — on imagery
+     Photography is the primary content here, so "white at an alpha, over a
+     photo" is a real subsystem, not a one-off. These are the alphas the canvas
+     actually uses, each at the role it was used for.
+     --------------------------------------------------------------------------- */
+  --ds-color-on-image:              #ffffff;                  /* hero title, brand, button label */
+  --ds-color-on-image-strong:       rgba(255,255,255,0.85);   /* nav link, rest */
+  --ds-color-on-image-muted:        rgba(255,255,255,0.8);    /* hero subtitle, location body */
+  --ds-color-on-image-subtle:       rgba(255,255,255,0.7);    /* lightbox close glyph */
+  --ds-color-on-image-faint:        rgba(255,255,255,0.5);    /* footer meta, lightbox counter */
+  --ds-color-on-image-border:       rgba(255,255,255,0.5);    /* hero outline button */
+  --ds-color-on-image-border-soft:  rgba(255,255,255,0.4);    /* location outline button */
+  --ds-color-on-image-fill:         rgba(255,255,255,0.1);    /* lightbox nav, rest */
+  --ds-color-on-image-fill-hover:   rgba(255,255,255,0.2);    /* lightbox nav, hover */
+
+  /* ---------------------------------------------------------------------------
+     COLOUR — scrims
+     What makes white text legible over an arbitrary photograph.
+     --------------------------------------------------------------------------- */
+  --ds-scrim-nav:               rgba(255,255,255,0.96);   /* nav, once scrolled */
+  --ds-scrim-lightbox:          rgba(10,10,20,0.94);
+  --ds-scrim-image-hover:       rgba(0,0,0,0.06);         /* photo strip, hover */
+  --ds-scrim-image-hover-strong:rgba(0,0,0,0.1);          /* gallery tile, hover */
+  --ds-scrim-hero: linear-gradient(
+                      180deg,
+                      rgba(20,20,40,0.3)  0%,
+                      rgba(20,20,40,0.15) 40%,
+                      rgba(20,20,40,0.45) 100%);
+
+  /* ---------------------------------------------------------------------------
+     TYPE — families
+     Two families, strictly divided: serif for anything that names something,
+     sans for anything that instructs or labels.
+     --------------------------------------------------------------------------- */
+  --ds-font-display: 'Playfair Display', 'Iowan Old Style', Georgia, serif;
+  --ds-font-body:    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+  /* TYPE — UI/body scale (sans) */
+  --ds-text-2xs:  11px;   /* booking field label */
+  --ds-text-xs:   12px;   /* section eyebrow */
+  --ds-text-sm:   13px;   /* button label, feature caption, footer */
+  --ds-text-md:   14px;   /* nav link, hero eyebrow, large button */
+  --ds-text-base: 16px;   /* body default */
+  --ds-text-lg:   17px;   /* welcome prose */
+  --ds-text-lead: clamp(16px, 1.8vw, 19px);   /* hero subtitle */
+
+  /* TYPE — display scale (serif), fluid exactly as the canvas has it */
+  --ds-display-xs:  18px;                        /* brand mark, small viewport */
+  --ds-display-sm:  20px;                        /* footer brand */
+  --ds-display-md:  22px;                        /* brand mark, feature value */
+  --ds-display-lg:  clamp(26px, 3vw, 36px);      /* gallery heading */
+  --ds-display-xl:  clamp(26px, 3vw, 38px);      /* location + reservations heading */
+  --ds-display-2xl: clamp(28px, 3.5vw, 42px);    /* welcome heading */
+  --ds-display-3xl: clamp(42px, 6vw, 72px);      /* hero title */
+  --ds-glyph-lg:    32px;                        /* lightbox close × */
+
+  /* TYPE — weight
+     The canvas sets 500/600/700 explicitly and never writes 400 — 400 is the
+     inherited default for body copy, and the @import loads Playfair at it. It
+     is named here so a component can state the default rather than omit it. */
+  --ds-weight-regular:  400;
+  --ds-weight-medium:   500;
+  --ds-weight-semibold: 600;
+  --ds-weight-bold:     700;
+
+  /* TYPE — leading */
+  --ds-leading-display: 1.08;   /* hero title */
+  --ds-leading-tight:   1.2;    /* welcome heading */
+  --ds-leading-snug:    1.25;   /* location heading */
+  --ds-leading-normal:  1.6;    /* body default */
+  --ds-leading-relaxed: 1.75;   /* long-form prose */
+
+  /* TYPE — tracking
+     The wide uppercase tracking is the signature of this brand. Eyebrows are
+     never set at normal tracking. */
+  --ds-tracking-tight:        -0.01em;   /* hero title */
+  --ds-tracking-display:       0.01em;   /* brand mark */
+  --ds-tracking-normal:        0.02em;   /* nav link, feature caption */
+  --ds-tracking-wide:          0.04em;   /* lightbox counter */
+  --ds-tracking-wider:         0.05em;   /* nav Book Now */
+  --ds-tracking-button:        0.06em;   /* all other buttons */
+  --ds-tracking-label:         0.08em;   /* hero outline button, field label */
+  --ds-tracking-eyebrow:       0.15em;   /* section eyebrows */
+  --ds-tracking-eyebrow-hero:  0.2em;    /* hero eyebrow */
+
+  /* ---------------------------------------------------------------------------
+     SPACE — 4px grid
+     --------------------------------------------------------------------------- */
+  --ds-space-1:  4px;
+  --ds-space-2:  8px;
+  --ds-space-3:  12px;
+  --ds-space-4:  16px;
+  --ds-space-5:  20px;
+  --ds-space-6:  24px;
+  --ds-space-7:  28px;
+  --ds-space-8:  32px;
+  --ds-space-9:  36px;
+  --ds-space-10: 40px;
+  --ds-space-12: 48px;
+  --ds-space-14: 56px;
+  --ds-space-16: 64px;
+  --ds-space-20: 80px;
+  --ds-space-24: 96px;
+
+  /* SPACE — off-grid values the canvas genuinely uses. Kept, not rounded. */
+  --ds-space-button-y:    14px;   /* hero outline button, vertical padding */
+  --ds-space-button-y-lg: 18px;   /* booking Search, small viewport */
+
+  /* SPACE — photo gutters
+     This design sets photographs nearly edge to edge. These gaps are
+     deliberately below the 4px grid and shrink with the viewport. */
+  --ds-gutter-gallery:    6px;
+  --ds-gutter-gallery-sm: 4px;
+  --ds-gutter-strip:      4px;
+  --ds-gutter-strip-sm:   3px;
+  --ds-gutter-strip-xs:   2px;
+
+  /* SPACE — page edge, per breakpoint */
+  --ds-page-x:    48px;
+  --ds-page-x-md: 28px;
+  --ds-page-x-sm: 20px;
+
+  /* ---------------------------------------------------------------------------
+     SHAPE
+     This brand is square. `--ds-radius-none` is the default for every surface,
+     button and field; the circle exists only for the lightbox arrows. There is
+     no 8px/12px radius in this design — do not add one to "soften" a control.
+     --------------------------------------------------------------------------- */
+  --ds-radius-none: 0;
+  --ds-radius-full: 50%;
+
+  --ds-border-width:       1px;   /* hairlines, field dividers, feature grid */
+  --ds-border-width-thick: 2px;   /* outline buttons, the rule under a heading */
+
+  --ds-rule-width: 48px;          /* the short gold rule under a heading */
+
+  /* ---------------------------------------------------------------------------
+     DEPTH
+     --------------------------------------------------------------------------- */
+  --ds-shadow-hairline: 0 1px 0 var(--ds-color-border);                    /* scrolled nav */
+  --ds-shadow-raised:   0 8px 40px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.06);  /* booking bar */
+  --ds-shadow-overlay:  0 24px 80px rgba(0,0,0,0.5);                       /* lightbox image */
+
+  --ds-blur-nav:     16px;
+  --ds-blur-control: 8px;
+
+  /* ---------------------------------------------------------------------------
+     MOTION
+     Photographs move slowly; chrome moves quickly.
+     --------------------------------------------------------------------------- */
+  --ds-ease-image:          cubic-bezier(0.25,0.46,0.45,0.94);
+  --ds-duration-fast:       0.2s;   /* colour on a glyph */
+  --ds-duration-base:       0.25s;  /* button fill */
+  --ds-duration-medium:     0.3s;   /* outline button, scrim, lightbox fade */
+  --ds-duration-slow:       0.4s;   /* nav settling on scroll */
+  --ds-duration-image:      0.5s;   /* photo-strip zoom */
+  --ds-duration-image-slow: 0.6s;   /* gallery tile zoom */
+
+  /* ---------------------------------------------------------------------------
+     LAYOUT — measures
+     --------------------------------------------------------------------------- */
+  --ds-measure-prose:  520px;   /* hero subtitle */
+  --ds-measure-narrow: 720px;   /* welcome column */
+  --ds-measure-hero:   800px;
+  --ds-measure-bar:    900px;   /* booking bar, photo strip */
+  --ds-measure-wide:   960px;   /* feature row */
+
+  --ds-hero-height:     100vh;
+  --ds-hero-min:        700px;
+  --ds-hero-min-sm:     550px;
+  --ds-lightbox-max-w:  90vw;
+  --ds-lightbox-max-h:  88vh;
+
+  /* ---------------------------------------------------------------------------
+     LAYOUT — block heights
+     Photographs have no intrinsic height in a grid, so this design floors every
+     photographic block explicitly. Each value below is a `min-height` the canvas
+     actually sets; they are design values, not incidental layout, and they are
+     what makes the asymmetric gallery read as composed rather than ragged.
+     --------------------------------------------------------------------------- */
+
+  /* SplitPanel — the half-photo / half-navy Location band */
+  --ds-panel-min-h:        500px;   /* the panel itself */
+  --ds-panel-image-min-h:  300px;   /* the image half, once stacked at --ds-bp-md */
+
+  /* Gallery tiles, per breakpoint. The grid is three tile shapes, not eight
+     one-off boxes: one tall, some small, some wide. See components.md § Gallery. */
+  --ds-tile-h-tall:        480px;   /* the single tall tile, desktop */
+  --ds-tile-h-wide:        280px;   /* the wide row, desktop */
+  --ds-tile-h-small:       230px;   /* the small quartet, desktop */
+  --ds-tile-h-tall-md:     300px;   /* tall tile at --ds-bp-md */
+  --ds-tile-h-md:          180px;   /* every other tile at --ds-bp-md */
+  --ds-tile-h-tall-sm:     220px;   /* tall tile at --ds-bp-sm */
+  --ds-tile-h-wide-sm:     200px;   /* wide tile at --ds-bp-sm */
+  --ds-tile-h-sm:          160px;   /* every other tile at --ds-bp-sm */
+
+  /* LAYOUT — ratios */
+  --ds-aspect-strip:       16 / 10; /* photo-strip thumbnail */
+
+  /* LAYOUT — stacking */
+  --ds-z-raised:   2;     /* hero content above its scrim */
+  --ds-z-bar:      10;    /* booking bar over the hero */
+  --ds-z-nav:      100;
+  --ds-z-lightbox: 200;
+
+  /* ---------------------------------------------------------------------------
+     BREAKPOINTS
+     Recorded for reference only — a media query cannot read a custom property.
+     Write them as literals and keep them equal to these:
+       tablet and below :  max-width: 1023px
+       phone  and below :  max-width:  639px
+     --------------------------------------------------------------------------- */
+  --ds-bp-md: 1023px;
+  --ds-bp-sm: 639px;
+}
