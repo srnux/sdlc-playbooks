@@ -1,25 +1,25 @@
 ---
-title: "Stop Asking Your Coding Agent to Behave: Gates, Not Prompts"
+title: "Catching AI Workflow Failures with Executable Playbooks"
 published: false
 description: "A file-based delivery procedure for Claude Code and Codex that turns workflow preconditions into executable checks, with explicit limits."
-tags: ai, productivity, architecture, webdev
+tags: ai, productivity, architecture, webdev, claude-code, codex, playbooks
 cover_image:
-canonical_url:
+canonical_url: https://luka-engels.de/writing/gates-not-prompts/
 ---
 
-Agentic coding is fast at producing code and bad at producing *the right* code.
+An AI coding agent can produce working code while skipping the steps that make it the right thing to build. Implementation starts without a plan. Approval is assumed. A prototype changes after work begins, and the agent follows the new version instead of the one you agreed on.
 
-In my experience the usual failure isn't a bug. It's a feature nobody specified, built from a design nobody approved, against a mock-up that changed after the work started. The code is fine. It just answers the wrong question.
+These are workflow failures, and passing tests won't necessarily reveal them. You need to check what was specified, what was approved, and which version the work is supposed to follow.
 
-I built [**sdlc-playbooks**](https://github.com/srnux/sdlc-playbooks) to catch those failures mechanically. It's a file-based delivery procedure (design system → requirements → prototype → human approval → product) that runs in Claude Code and in Codex from one source. This post covers how it works and why it's shaped the way it is.
+I built [**sdlc-playbooks**](https://github.com/srnux/sdlc-playbooks) to make those checks executable. Each playbook describes a delivery phase: the inputs it needs, the work to do, and the artifact it produces. Scripts check the prerequisites against files in the repo and report missing artifacts or inconsistent state before the next phase starts.
 
-**The repo defines playbooks instead of specialised agents.** Each playbook describes a phase: what it needs, which checks must pass, what work happens, and what artifact it produces. The coding agent executes that procedure. Moving from requirements to implementation means changing the playbook, without needing a separate "product owner" or "engineer" agent definition.
+For example, the implementation gate refuses to proceed when a story has no plan or its pinned prototype snapshot is missing. A prompt can tell the agent to check those things; a script can inspect the files and return a specific failure with a fix.
 
-One idea runs through the whole thing:
+The procedure runs from design system → requirements → prototype → human approval → product, with one source shared by Claude Code and Codex. The agent follows the playbooks; the scripts check the parts of the workflow that can be checked mechanically.
 
-> **A rule written only as prose for a model to honour will eventually be skipped.**
+That distinction matters: an executable check can establish that a plan exists. It cannot establish that the plan is good, or independently prove that a person approved the prototype. Those decisions still need people and review.
 
-So I move checkable preconditions into scripts that exit non-zero. The scripts catch missing artifacts and inconsistent state; people still decide whether the requirements and the result are right.
+This post walks through those checks, where they run, and what they can—and cannot—catch.
 
 ---
 
@@ -52,14 +52,14 @@ So I move checkable preconditions into scripts that exit non-zero. The scripts c
 
 There are seven phases, each with one playbook and one gate. Everything the flow knows is stored in a file:
 
-| Artifact | Written by |
-|---|---|
-| `design-system/tokens.css`, `components.md` | phase 0, then locked |
-| `work/items/REQ-###.md` | phase 1 |
-| `prototype/<slug>.html` | phase 2 |
-| `prototype/.approved/<slug>-v<N>.html` | phase 3, versioned baseline |
-| `work/items/ST-###.md` | phase 3, one story per screen |
-| `work/plans/ST-###.md` | phase 4 |
+| Artifact                                    | Written by                    |
+| ------------------------------------------- | ----------------------------- |
+| `design-system/tokens.css`, `components.md` | phase 0, then locked          |
+| `work/items/REQ-###.md`                     | phase 1                       |
+| `prototype/<slug>.html`                     | phase 2                       |
+| `prototype/.approved/<slug>-v<N>.html`      | phase 3, versioned baseline   |
+| `work/items/ST-###.md`                      | phase 3, one story per screen |
+| `work/plans/ST-###.md`                      | phase 4                       |
 
 With the default file tracker, the workflow state lives in the repo. **If you delete every playbook, a human can still finish the work from the artifacts.** That's the intended direction of dependency.
 
@@ -67,19 +67,19 @@ With the default file tracker, the workflow state lives in the repo. **If you de
 
 ## Why playbooks instead of agents
 
-Most agent setups I've seen start with personas: *"You are a senior reviewer."* That describes an identity, but leaves the working procedure to be specified elsewhere. Here, the playbook is the unit of organisation. It names the inputs, gate, outputs, and done-condition for a phase. For example:
+Most agent setups I've seen start with personas: _"You are a senior reviewer."_ That describes an identity, but leaves the working procedure to be specified elsewhere. Here, the playbook is the unit of organisation. It names the inputs, gate, outputs, and done-condition for a phase. For example:
 
 ```markdown
 ## Contract
 
-|                |                                                              |
-|----------------|--------------------------------------------------------------|
-| **Phase**      | 5 — the only phase that writes product code                  |
-| **Gate**       | `node .claude/tools/gate.mjs implement ST-###`               |
-| **Inputs**     | the plan, the pinned snapshot, the catalog, the component lib |
-| **Produces**   | product code, one test per AC                                |
-| **Done when**  | every `verify.commands` entry is green, story is `in-review` |
-| **Never**      | copy the prototype into the product; build against the live prototype |
+|               |                                                                       |
+| ------------- | --------------------------------------------------------------------- |
+| **Phase**     | 5 — the only phase that writes product code                           |
+| **Gate**      | `node .claude/tools/gate.mjs implement ST-###`                        |
+| **Inputs**    | the plan, the pinned snapshot, the catalog, the component lib         |
+| **Produces**  | product code, one test per AC                                         |
+| **Done when** | every `verify.commands` entry is green, story is `in-review`          |
+| **Never**     | copy the prototype into the product; build against the live prototype |
 ```
 
 Each playbook also routes neighbouring decisions: new tokens go to `lock-design-system`, changed scope goes to `capture-requirements`, and finished work goes to `review-change`.
@@ -112,27 +112,27 @@ Gate — this runs before you read any further; a non-zero exit aborts the comma
 
 That puts a concrete check at the command entry point. The playbook instructs the agent to stop on failure. Direct script calls and other editing paths still need their own controls.
 
-| Phase | Refuses when |
-|---|---|
-| `design-system` | already locked and `--refresh` wasn't passed |
-| `requirements` | no input |
-| `prototype` | design system unlocked · wrong status · **no acceptance criteria** |
-| `approve` | not `prototyped` · no `data-screen` markup · **no `--human-approved`** |
-| `plan` | parent not approved · no version pin · **snapshot missing** |
-| `implement` | **no plan** · story not `in-progress` · snapshot missing |
-| `review` | story not `in-review` · **already at `loops.reviewRounds`** |
+| Phase           | Refuses when                                                           |
+| --------------- | ---------------------------------------------------------------------- |
+| `design-system` | already locked and `--refresh` wasn't passed                           |
+| `requirements`  | no input                                                               |
+| `prototype`     | design system unlocked · wrong status · **no acceptance criteria**     |
+| `approve`       | not `prototyped` · no `data-screen` markup · **no `--human-approved`** |
+| `plan`          | parent not approved · no version pin · **snapshot missing**            |
+| `implement`     | **no plan** · story not `in-progress` · snapshot missing               |
+| `review`        | story not `in-review` · **already at `loops.reviewRounds`**            |
 
 ### Making the approval assertion explicit
 
-The old version of `/approve` said: *"This command represents a human decision. Do not run it on your own judgment."*
+The old version of `/approve` said: _"This command represents a human decision. Do not run it on your own judgment."_
 
 The gate now requires an explicit flag:
 
 ```js
-if (!args['human-approved']) {
+if (!args["human-approved"]) {
   throw new Blocked(
     `approval is a human decision and has not been recorded for ${id}`,
-    `ask the person to open ${req.prototype} and say yes, then run: /approve ${id} --human-approved`
+    `ask the person to open ${req.prototype} and say yes, then run: /approve ${id} --human-approved`,
   );
 }
 ```
@@ -206,7 +206,7 @@ It reports gaps such as `screen-without-story`, `story-without-plan`, `stale-pin
 The prototype convention puts two attributes on every screen root:
 
 ```html
-<section data-screen="SCR-booking-enquiry" data-req="REQ-003">
+<section data-screen="SCR-booking-enquiry" data-req="REQ-003"></section>
 ```
 
 The checker discovers screens through `data-screen`; the approve gate refuses a prototype with no screen markers. `data-req` records the intended requirement association.
@@ -217,7 +217,7 @@ The checker discovers screens through `data-screen`; the approve gate refuses a 
 
 ## The prototype, and the pin
 
-Phase 2 calls for one HTML file per requirement: React 18 UMD plus `@babel/standalone` from a CDN, tokens inlined, catalog components, hash routing, and realistic mock data. It needs no build step and opens with a double-click, but loading its CDN dependencies requires network access. The playbook requires **every state to be drawn**: empty, loading, populated, error, *and success*. "The list refreshes" doesn't show a person what success looks like.
+Phase 2 calls for one HTML file per requirement: React 18 UMD plus `@babel/standalone` from a CDN, tokens inlined, catalog components, hash routing, and realistic mock data. It needs no build step and opens with a double-click, but loading its CDN dependencies requires network access. The playbook requires **every state to be drawn**: empty, loading, populated, error, _and success_. "The list refreshes" doesn't show a person what success looks like.
 
 After human approval, the procedure uses `approve.mjs` to create `prototype/.approved/<slug>-v<N>.html`, then cuts one story per screen with a `prototypeVersion: v<N>` pin. These are versioned snapshots treated as immutable by the procedure. The utility checks for an existing destination before copying; the resulting files remain editable on disk.
 
